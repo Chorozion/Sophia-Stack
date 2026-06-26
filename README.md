@@ -21,6 +21,10 @@ to. No platform lock-in, no monthly SaaS holding your site hostage. It's yours.
 | **Connect any AI (token / MCP / OpenAPI)** | **Bring your own key — one-tap providers** |
 | [![Connect](docs/screenshots/03-connect.png)](docs/screenshots/03-connect.png) | [![Settings](docs/screenshots/05-settings.png)](docs/screenshots/05-settings.png) |
 
+**…and a complete page it built from one prompt** ("build me a coffee shop landing page"):
+
+<p align="center"><a href="docs/screenshots/06-built-page.png"><img src="docs/screenshots/06-built-page.png" width="520" alt="A page Sophia built"></a></p>
+
 ## What it does
 
 1. **Deploy** the zip to any Node host (Hostinger "Setup Node.js App", Railway, Render, a VPS).
