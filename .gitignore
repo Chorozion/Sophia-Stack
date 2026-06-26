@@ -21,3 +21,4 @@ demo/out/
 *.log
 .DS_Store
 dist-zip/
+!release/
