@@ -8,8 +8,12 @@ build and edit this live website/app. Apply changes via MCP or the REST API; the
 instantly, are validated (bad edits are rejected), and can be rolled back.
 
 ## 1. Connect
-- **MCP endpoint:** {{URL}}mcp  — JSON-RPC 2.0 over HTTP POST. Send header
-  \`Authorization: Bearer <token>\` on any write.
+- **REST (simplest):** GET {{URL}}api/sophia/catalog, GET {{URL}}api/sophia/model,
+  POST {{URL}}api/sophia/patch, PUT {{URL}}api/sophia/css, POST {{URL}}api/sophia/rollback.
+  Send \`Authorization: Bearer <token>\` on writes.
+- **ChatGPT users:** make a Custom GPT Action — import the schema at
+  **{{URL}}openapi.json**, set auth to API-Key / Bearer with your mykey- token. Then chat.
+- **MCP endpoint:** {{URL}}mcp — JSON-RPC 2.0 over HTTP POST (same Bearer header).
 - First call: read the machine spec -> **GET {{URL}}api/sophia/catalog** (blocks, props,
   styles, effects, patch ops, data API). Use only what's in the catalog.
 

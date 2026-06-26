@@ -16,6 +16,7 @@ import { Store } from "./store.mjs";
 import { validateModel, sanitizeCss } from "./validate.mjs";
 import { DataStore, sanitizeRecord } from "./data-store.mjs";
 import { renderSkill } from "./skill-text.mjs";
+import { openapiSpec } from "./openapi.mjs";
 import { MediaStore } from "./media-store.mjs";
 import { runFunction } from "./sandbox.mjs";
 import { dashboardPage } from "./dashboard.mjs";
@@ -230,6 +231,11 @@ ${CORE_FOOTER}
     if (m === "GET" && (p === "/skill.md" || p === "/skill")) {
       res.writeHead(200, { "Content-Type": "text/markdown; charset=utf-8" });
       return res.end(renderSkill(origin(req)));
+    }
+    // OpenAPI schema for a ChatGPT Custom GPT Action (server URL = this deployment).
+    if (m === "GET" && (p === "/openapi.json" || p === "/openapi")) {
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+      return res.end(JSON.stringify(openapiSpec(origin(req))));
     }
     if (m === "GET" && p === "/llms.txt") {
       const o = origin(req);

@@ -47,6 +47,10 @@ ok((await get("/about")).text.includes("sx-core-footer"), "core footer on AI-add
 const cssTry = await (await fetch(base + "/api/sophia/css", { method: "PUT", headers: { "Content-Type": "application/json", Authorization: "Bearer " + token }, body: JSON.stringify({ css: ".sx-core-footer{display:none}" }) })).json();
 ok(!cssTry.ok, "custom CSS cannot hide the protected footer");
 
+// 7. OpenAPI schema for a ChatGPT Custom GPT Action (dynamic server url)
+const oas = JSON.parse((await get("/openapi.json")).text);
+ok(oas.openapi === "3.1.0" && oas.servers[0].url.endsWith(new URL(base).host) && oas.paths["/api/sophia/patch"] && oas.components.securitySchemes.bearerAuth, "/openapi.json: valid schema, server url = this origin, bearer auth");
+
 console.log(`\n  ${pass} passed, ${fail} failed`);
 srv.close();
 await new Promise((r) => setTimeout(r, 200));
