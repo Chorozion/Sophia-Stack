@@ -49,23 +49,27 @@ a{color:#00D4FF}.hide{display:none}code{color:#FF6B35}</style></head>
   }
   function build(P){
     P.innerHTML=
-      '<div class="card"><h2>Type it here <span style="color:#7d93a8;font-size:12px">(optional &mdash; needs an AI key)</span></h2><p>The main way to build is the <b>Connect</b> tab (hand your AI the token; it edits directly). This box is a convenience: add your own AI key in <b>Settings</b>, then just type and the stack builds it for you.</p>'
-      +'<textarea id="ask" placeholder="e.g. Make a landing page for my coffee shop with a hero, opening hours, and a contact form. Use warm colors."></textarea>'
-      +'<div class="row"><button id="go">Build it</button> <a href="/" target="_blank" style="margin-left:4px">Open site &rarr;</a> <span id="r" style="font-size:13px"></span></div>'
-      +'<div id="needkey" class="hide" style="margin-top:10px;font-size:13px;color:#FF6B35">To let Sophia build automatically, add your AI key in <b>Settings</b> (one-time). No key? Use the manual option below with any chatbot.</div></div>'
+      '<div class="card"><h2>Build with Sophia <span style="color:#7d93a8;font-size:12px">(needs an AI key in Settings)</span></h2><p>Chat with the builder. It reads your site, makes the changes, fixes its own mistakes, and keeps going &mdash; like Bolt, on your own site.</p>'
+      +'<div id="thread" style="max-height:320px;overflow:auto;margin-bottom:10px"></div>'
+      +'<textarea id="ask" placeholder="e.g. Build a coffee shop landing page: a hero, a menu section, opening hours, and a contact form. Warm colors."></textarea>'
+      +'<div class="row"><button id="go">Send</button> <a href="/" target="_blank" style="margin-left:4px">Open site &rarr;</a> <span id="r" style="font-size:13px"></span></div>'
+      +'<div id="needkey" class="hide" style="margin-top:10px;font-size:13px;color:#FF6B35">Add your AI key in <b>Settings</b> (one-time) to use this. No key? Use the manual option below, or hand your AI the token on the <b>Connect</b> tab.</div></div>'
       +'<div class="card"><h2>Manual &middot; any chatbot, no AI key</h2><p>Copy a prompt out, paste the reply back. Works with any AI (free accounts too).</p>'
       +'<textarea id="want" placeholder="What do you want? e.g. a landing page for my coffee shop with hours and a contact form."></textarea>'
       +'<div class="row"><button id="genp" class="ghost">1 &middot; Copy the prompt</button> <span class="ok" id="gok"></span></div>'
       +'<textarea id="reply" placeholder="2 · Paste everything the AI replied here." style="margin-top:10px"></textarea>'
       +'<div class="row"><button id="applyb" class="ghost">Apply to my site</button> <span id="ares" style="font-size:13px"></span></div></div>';
-    // Built-in agent: the stack calls the owner's AI and applies the result.
+    // Conversational agent loop: the stack reads/edits on the AI's behalf.
+    var thread=[];
+    function bubble(role,text){var d=document.createElement('div');d.style.cssText='margin:6px 0;padding:9px 12px;border-radius:10px;font-size:14px;line-height:1.5;'+(role==='user'?'background:rgba(0,212,255,.12);margin-left:30px':'background:#0c1a28;border:1px solid rgba(0,212,255,.12);margin-right:30px');d.textContent=text;$('thread').appendChild(d);$('thread').scrollTop=$('thread').scrollHeight}
     $('go').onclick=function(){
-      var msg=$('ask').value.trim(); if(!msg){$('r').textContent='Type what you want first.';return}
-      $('r').textContent='Sophia is building...';
-      api('POST','/api/sophia/agent',{message:msg}).then(function(j){
-        if(j&&j.applied){$('r').innerHTML='<span class="ok">Done! Press Open site to see it.</span>';$('ask').value=''}
-        else if(j&&j.error==='no_llm'){$('r').textContent='';$('needkey').classList.remove('hide')}
-        else{$('r').innerHTML='<span style="color:#ff8a8a">'+esc((j&&j.message)||(j&&j.error)||'failed')+'</span>'}
+      var t=$('ask').value.trim(); if(!t){return}
+      thread.push({role:'user',content:t}); bubble('user',t); $('ask').value=''; $('r').textContent='Sophia is working...'; $('go').disabled=true;
+      api('POST','/api/sophia/agent',{messages:thread}).then(function(j){
+        $('go').disabled=false; $('r').textContent='';
+        if(j&&j.error==='no_llm'){$('needkey').classList.remove('hide');return}
+        if(j&&typeof j.reply==='string'){thread.push({role:'assistant',content:j.reply});bubble('sophia',j.reply+(j.applied&&j.applied.length?'   ✓ '+j.applied.length+' change(s) applied':''))}
+        else{bubble('sophia',(j&&j.message)||'Something went wrong. Try again.')}
       });
     };
     var cat=null,mdl=null;

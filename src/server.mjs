@@ -56,20 +56,31 @@ function extractPatch(text) {
   if (sa >= 0 && ea > sa) { try { return JSON.parse(t.slice(sa, ea + 1)); } catch {} }
   return null;
 }
-// The system prompt that turns a plain request into a valid patch.
-function agentSystemPrompt(catalog, model) {
+// System prompt for the agent loop (the AI uses tools, not one-shot JSON).
+function agentSystemPrompt(catalog) {
   const blocks = Object.keys(catalog.blocks || {}).join(", ");
   const styles = (Array.isArray(catalog.styles) ? catalog.styles.map((s) => s.id || s.name || s) : Object.keys(catalog.styles || {})).join(", ");
   return [
-    "You edit a live website by returning a JSON patch. Reply with ONLY a JSON object, no prose, no markdown.",
-    'FORMAT: {"ops":[ ... ]}',
-    "Ops: set/add/remove/move target a block by id (with path/value/index); mset/mdel target a model dot-path (e.g. style, pages./about, data.collections.x, functions.x).",
+    "You are Sophia, an AI that builds and edits the user's live website by calling tools. Be proactive and thorough — build complete, professional results with real content, multiple sections, and good copy (not placeholders).",
+    "Workflow each turn: call read_model and read_catalog to see the site + what's allowed, then make changes with apply_patch. Make small valid patches; if apply_patch returns errors, read them and fix, then retry. Use set_css for custom styling. When finished, tell the user briefly what you changed.",
+    "Patch ops: set/add/remove/move target a block by id (path/value/index); mset/mdel target a model dot-path (e.g. style, pages./about, data.collections.x, functions.x). Keep every block id unique. Only use allowed block types and styles.",
     "Allowed block types: " + blocks,
     "Allowed styles: " + styles,
-    "Keep every block id unique. Only use allowed types/styles. Make minimal, valid edits. Do not remove the logo/about blocks unless asked.",
-    "CURRENT MODEL:",
-    JSON.stringify(model),
   ].join("\n");
+}
+// Tools the agent can call (OpenAI-compatible function-calling format).
+const AGENT_TOOLS = [
+  { type: "function", function: { name: "read_model", description: "Read the current site model JSON (pages, blocks, style, data, functions).", parameters: { type: "object", properties: {} } } },
+  { type: "function", function: { name: "read_catalog", description: "Read allowed block types + their props, style presets, effects, and patch ops.", parameters: { type: "object", properties: {} } } },
+  { type: "function", function: { name: "apply_patch", description: "Apply patch ops to the live site. Returns ok + changed, or ok:false + validation errors to fix.", parameters: { type: "object", properties: { ops: { type: "array", items: { type: "object" } } }, required: ["ops"] } } },
+  { type: "function", function: { name: "set_css", description: "Replace the live custom CSS layer.", parameters: { type: "object", properties: { css: { type: "string" } }, required: ["css"] } } },
+];
+async function callLLM(llm, messages) {
+  const url = (llm.baseURL || "https://api.openai.com/v1").replace(/\/+$/, "") + "/chat/completions";
+  const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + llm.apiKey }, body: JSON.stringify({ model: llm.model || "gpt-4o-mini", temperature: 0.3, messages, tools: AGENT_TOOLS }) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error((j.error && j.error.message) || ("AI error " + r.status));
+  return j.choices && j.choices[0] && j.choices[0].message;
 }
 const send = (res, code, obj) => { res.writeHead(code, { "Content-Type": "application/json" }); res.end(JSON.stringify(obj)); };
 
@@ -482,29 +493,38 @@ ${CORE_FOOTER}
       store.saveTokens(tokens);
       return send(res, 200, { ok: true });
     }
-    // Type a request -> the stack asks the owner's AI for a patch -> applies it. No copy-paste.
+    // Conversational AI builder: a tool-using agent loop. The stack runs read/edit
+    // tools on the AI's behalf until the task is done, self-correcting on errors.
     if (m === "POST" && p === "/api/sophia/agent") {
       if (!isAdmin(req)) return send(res, 401, { error: "owner only" });
       const llm = tokens.llm || {};
       if (!llm.apiKey) return send(res, 400, { error: "no_llm", message: "Add your AI key in Settings first." });
-      const message = String((JSON.parse((await readBody(req)) || "{}").message) || "").slice(0, 4000);
-      if (!message) return send(res, 400, { error: "empty", message: "Tell Sophia what to build." });
+      const body = JSON.parse((await readBody(req)) || "{}");
+      const history = (Array.isArray(body.messages) ? body.messages : []).filter((x) => x && (x.role === "user" || x.role === "assistant") && typeof x.content === "string").slice(-20);
+      if (!history.length) return send(res, 400, { error: "empty", message: "Tell Sophia what to build." });
       let catalog; try { catalog = JSON.parse(readFileSync(catalogPath, "utf8")); } catch { catalog = { blocks: {}, styles: [] }; }
-      const payload = { model: llm.model || "gpt-4o-mini", temperature: 0.4, messages: [
-        { role: "system", content: agentSystemPrompt(catalog, model) },
-        { role: "user", content: message },
-      ] };
+      const messages = [{ role: "system", content: agentSystemPrompt(catalog) }, ...history];
+      const applied = [];
       try {
-        const url = (llm.baseURL || "https://api.openai.com/v1").replace(/\/+$/, "") + "/chat/completions";
-        const lr = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + llm.apiKey }, body: JSON.stringify(payload) });
-        const lj = await lr.json().catch(() => ({}));
-        if (!lr.ok) return send(res, 502, { error: "llm_error", message: (lj.error && lj.error.message) || ("AI error " + lr.status) });
-        const text = (lj.choices && lj.choices[0] && lj.choices[0].message && lj.choices[0].message.content) || "";
-        const patch = extractPatch(text);
-        const ops = patch && (patch.ops || (Array.isArray(patch) ? patch : null));
-        if (!ops) return send(res, 200, { ok: false, applied: false, message: "The AI did not return a valid change. Try rephrasing.", reply: text.slice(0, 500) });
-        const result = doPatch(ops);
-        return send(res, 200, { ok: !!result.ok, applied: !!result.ok, changed: result.changed || null, error: result.error || null, details: result.details || null });
+        for (let step = 0; step < 10; step++) {
+          const msg = await callLLM(llm, messages);
+          if (!msg) return send(res, 502, { error: "llm_error", message: "empty AI response" });
+          messages.push(msg);
+          const calls = msg.tool_calls || [];
+          if (!calls.length) return send(res, 200, { ok: true, reply: msg.content || "Done.", applied });
+          for (const tc of calls) {
+            let args = {}; try { args = JSON.parse((tc.function && tc.function.arguments) || "{}"); } catch {}
+            const name = tc.function && tc.function.name;
+            let result;
+            if (name === "read_model") result = JSON.stringify(model);
+            else if (name === "read_catalog") result = readFileSync(catalogPath, "utf8");
+            else if (name === "apply_patch") { const r = doPatch(args.ops || []); if (r.ok && r.changed) applied.push(...r.changed); result = JSON.stringify(r); }
+            else if (name === "set_css") { const r = doSetCss(args.css || ""); if (r.ok) applied.push("css"); result = JSON.stringify(r); }
+            else result = "unknown tool";
+            messages.push({ role: "tool", tool_call_id: tc.id, content: String(result).slice(0, 8000) });
+          }
+        }
+        return send(res, 200, { ok: true, reply: "I made several changes (hit the step limit). Tell me to continue if there's more.", applied });
       } catch (e) { return send(res, 502, { error: "llm_unreachable", message: String(e.message || e) }); }
     }
 

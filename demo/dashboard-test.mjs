@@ -18,7 +18,7 @@ const S = (m, p, b) => fetch(base + p, { method: m, headers: { Cookie: sid, ...(
 // Dashboard shell
 const dash = await fetch(base + "/dashboard", { headers: { Cookie: sid } });
 const dh = await dash.text();
-ok(dash.status === 200 && dh.includes("Sophia · Dashboard") && dh.includes("Pages") && dh.includes("Media") && dh.includes("Keys") && dh.includes("Connect your AI") && dh.includes("Type it here"), "dashboard loads with Connect + Build + all tabs");
+ok(dash.status === 200 && dh.includes("Sophia · Dashboard") && dh.includes("Pages") && dh.includes("Media") && dh.includes("Keys") && dh.includes("Connect your AI") && dh.includes("Build with Sophia"), "dashboard loads with Connect + Build + all tabs");
 
 // Build flow: the AI returns a patch (markdown-fenced, with prose) -> stack applies it
 const aiReply = "Sure! Here is the change:\n```json\n{ \"ops\": [ { \"op\": \"set\", \"id\": \"hero\", \"path\": \"headline\", \"value\": \"Bean There Coffee\" } ] }\n```\nLet me know if you want more.";
