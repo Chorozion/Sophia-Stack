@@ -62,5 +62,6 @@ export function sanitizeCss(css) {
   if (/expression\s*\(/i.test(s)) bad.push("uses legacy expression()");
   if (/javascript\s*:/i.test(s)) bad.push("uses javascript: url");
   if (/@import/i.test(s)) bad.push("uses @import (external fetch)");
+  if (/sx-core-footer/i.test(s)) bad.push("targets the protected Sophia footer");
   return { ok: bad.length === 0, errors: bad, css: s };
 }

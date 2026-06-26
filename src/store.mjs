@@ -8,8 +8,10 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, chmodSync } from "node:fs";
 import { join } from "node:path";
 import crypto from "node:crypto";
+import { WORDS } from "./wordlist.mjs";
 
 const newToken = () => "mykey-" + crypto.randomBytes(24).toString("base64url");
+const normWords = (s) => String(s || "").toLowerCase().trim().split(/[\s-]+/).filter(Boolean).join(" ");
 
 export class Store {
   constructor(dir) {
@@ -107,15 +109,16 @@ export class Store {
   // else gets in, the true owner uses this code to reset the password and kick
   // everyone out. Self-hosted, so this (or host file access) is the only way back.
   static newRecoveryCode(tokens) {
-    const code = "recover-" + crypto.randomBytes(15).toString("base64url");
+    const pick = () => WORDS[crypto.randomInt(WORDS.length)];
+    const code = [pick(), pick(), pick(), pick(), pick()].join(" "); // five random words
     const salt = crypto.randomBytes(16).toString("hex");
-    tokens.recovery = { salt, hash: crypto.scryptSync(code, salt, 64).toString("hex") };
+    tokens.recovery = { salt, hash: crypto.scryptSync(normWords(code), salt, 64).toString("hex") };
     return code; // plaintext shown once; only the hash is stored
   }
   static hasRecovery(tokens) { return !!tokens.recovery?.hash; }
   static verifyRecovery(tokens, code) {
     if (!Store.hasRecovery(tokens)) return false;
-    const h = crypto.scryptSync(String(code || ""), tokens.recovery.salt, 64).toString("hex");
+    const h = crypto.scryptSync(normWords(code), tokens.recovery.salt, 64).toString("hex");
     const a = Buffer.from(h), b = Buffer.from(tokens.recovery.hash);
     return a.length === b.length && crypto.timingSafeEqual(a, b);
   }

@@ -12,7 +12,6 @@ export const DEFAULT_SITE = {
           headline: "Your site is ready",
           sub: "Create your admin account, then connect your AI to build it.",
           cta: { label: "Get started", href: "/_setup" } },
-        { id: "foot", type: "footer", text: "Powered by Sophia Stack" },
       ],
     },
   },

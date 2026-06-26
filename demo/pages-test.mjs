@@ -40,6 +40,13 @@ ok(llms.text.includes("About Us") && llms.text.includes("# "), "llms.txt lists t
 // 5. Unknown route still 404s
 ok((await get("/nope")).status === 404, "unknown route -> 404");
 
+// 6. Immutable core footer on EVERY page + un-hideable via custom CSS
+const home = (await get("/")).text;
+ok(home.includes("sx-core-footer") && home.includes("Sophia Stack") && home.includes('href="/dashboard"'), "core footer (admin + branding) on home");
+ok((await get("/about")).text.includes("sx-core-footer"), "core footer on AI-added pages too");
+const cssTry = await (await fetch(base + "/api/sophia/css", { method: "PUT", headers: { "Content-Type": "application/json", Authorization: "Bearer " + token }, body: JSON.stringify({ css: ".sx-core-footer{display:none}" }) })).json();
+ok(!cssTry.ok, "custom CSS cannot hide the protected footer");
+
 console.log(`\n  ${pass} passed, ${fail} failed`);
 srv.close();
 await new Promise((r) => setTimeout(r, 200));

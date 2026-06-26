@@ -32,6 +32,12 @@ const MCP_TOOLS = [
   { name: "sophia_rollback", description: "Undo the last edit — restore the previous good version.", inputSchema: { type: "object", properties: {} } },
 ];
 
+// Immutable footer the CORE injects on every page (outside the React root, so the
+// AI's model edits can't touch it). Admin link + "Powered by Sophia Stack".
+const CORE_FOOTER = `<footer class="sx-core-footer" style="text-align:center;padding:16px;font-size:12px;color:#7d93a8;border-top:1px solid rgba(0,212,255,.14);font-family:system-ui,sans-serif;background:#0A1628 !important;display:block !important">
+<a href="/dashboard" style="color:#00D4FF;text-decoration:none">Admin</a> &nbsp;·&nbsp; Powered by <a href="https://sophiaxt.com" target="_blank" rel="noopener" style="color:#7d93a8;text-decoration:none">Sophia Stack</a>
+</footer>`;
+
 const readBody = (req) => new Promise((res) => { let b = ""; req.on("data", (c) => (b += c)); req.on("end", () => res(b)); });
 const readBodyBuffer = (req) => new Promise((res) => { const cs = []; req.on("data", (c) => cs.push(c)); req.on("end", () => res(Buffer.concat(cs))); });
 const send = (res, code, obj) => { res.writeHead(code, { "Content-Type": "application/json" }); res.end(JSON.stringify(obj)); };
@@ -243,6 +249,7 @@ export async function createServer(opts = {}) {
     const boot = JSON.stringify({ model, route: routePath, data }).replace(/</g, "\\u003c");
     return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title>${head}</head>
 <body><div id="root">${ssr(model, routePath, data)}</div>
+${CORE_FOOTER}
 <script>window.__SOPHIA__=${boot}</script><script src="/client.js"></script></body></html>`;
   };
 
