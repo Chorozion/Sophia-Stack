@@ -13,6 +13,14 @@ to. No platform lock-in, no monthly SaaS holding your site hostage. It's yours.
 
 > Replit/Bolt/Lovable power — but **remote, contained, and owned**, on a host you control.
 
+## Screenshots
+
+| Your branded site | Build by chatting with Sophia |
+|---|---|
+| [![Landing](docs/screenshots/01-landing.png)](docs/screenshots/01-landing.png) | [![Build chat](docs/screenshots/04-build-chat.png)](docs/screenshots/04-build-chat.png) |
+| **Connect any AI (token / MCP / OpenAPI)** | **Bring your own key — one-tap providers** |
+| [![Connect](docs/screenshots/03-connect.png)](docs/screenshots/03-connect.png) | [![Settings](docs/screenshots/05-settings.png)](docs/screenshots/05-settings.png) |
+
 ## What it does
 
 1. **Deploy** the zip to any Node host (Hostinger "Setup Node.js App", Railway, Render, a VPS).
