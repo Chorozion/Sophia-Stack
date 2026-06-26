@@ -32,6 +32,9 @@ copyFileSync(join(root, "catalog.json"), join(out, "catalog.json"));
 writeFileSync(join(out, "package.json"), JSON.stringify({
   name: "sophia-site", private: true, type: "module", main: "app.js",
   scripts: { start: "node app.js" }, engines: { node: ">=18" },
+  // Express is bundled into app.js (the app runs with no install); it's declared
+  // here so framework-detecting hosts (Hostinger, etc.) recognize + accept it.
+  dependencies: { express: "^5.2.1" },
 }, null, 2) + "\n");
 
 // Passenger / cPanel / Hostinger Node apps look for these entry names.

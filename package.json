@@ -17,14 +17,24 @@
     "test": "node demo/react-test.mjs && node demo/connections-test.mjs && node demo/server-test.mjs"
   },
   "dependencies": {
+    "express": "^5.2.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "esbuild": "^0.23.0"
   },
-  "keywords": ["ai", "token-efficient", "site-model", "real-time", "deploy", "sophiaxt"],
+  "keywords": [
+    "ai",
+    "token-efficient",
+    "site-model",
+    "real-time",
+    "deploy",
+    "sophiaxt"
+  ],
   "author": "SOPHIA XT (sophia-2)",
   "license": "UNLICENSED",
-  "engines": { "node": ">=18" }
+  "engines": {
+    "node": ">=18"
+  }
 }

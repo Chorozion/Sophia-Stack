@@ -5,7 +5,7 @@
 // changes live. An LLM connects with a token, reads /api/sophia/catalog, then
 // edits the model (/patch) and CSS (/css) in real time. Read endpoints are
 // public; writes need a bearer token; token management needs an admin token.
-import http from "node:http";
+import express from "express";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { ssr } from "../dist/ssr.mjs";
@@ -207,7 +207,7 @@ ${CORE_FOOTER}
   const proto = (req) => (req.headers["x-forwarded-proto"] || "https");
   const origin = (req) => `${proto(req)}://${host(req)}`;
 
-  const server = http.createServer(async (req, res) => {
+  const requestHandler = async (req, res) => {
     const url = new URL(req.url, "http://localhost");
     const p = url.pathname;
     const m = req.method;
@@ -512,16 +512,28 @@ ${CORE_FOOTER}
     }
 
     res.writeHead(404); res.end("not found");
+  };
+
+  // Express app (Hostinger + most Node hosts detect this as the framework).
+  // It's a thin shell: every request flows straight into our handler, which
+  // owns all routing/auth/SSR. We add NO body parser, so the raw request stream
+  // stays intact for our own readBody/readBodyBuffer (incl. binary media uploads).
+  const app = express();
+  app.disable("x-powered-by");
+  app.use((req, res) => {
+    requestHandler(req, res).catch(() => { if (!res.headersSent) { res.writeHead(500); res.end("server error"); } });
   });
 
-  return new Promise((resolve) => server.listen(port, () => {
-    const actual = server.address().port; // honors port:0 (OS-assigned, collision-free)
-    resolve({
-      url: `http://localhost:${actual}/`,
-      dashboardUrl: `http://localhost:${actual}/dashboard`,
-      getModel: () => model, getCss: () => css, getTokens: () => tokens,
-      close: () => { clearInterval(refresh); server.close(); },
-      port: actual,
+  return new Promise((resolve) => {
+    const server = app.listen(port, () => {
+      const actual = server.address().port; // honors port:0 (OS-assigned, collision-free)
+      resolve({
+        url: `http://localhost:${actual}/`,
+        dashboardUrl: `http://localhost:${actual}/dashboard`,
+        getModel: () => model, getCss: () => css, getTokens: () => tokens,
+        close: () => { clearInterval(refresh); server.close(); },
+        port: actual,
+      });
     });
-  }));
+  });
 }
