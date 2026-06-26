@@ -28,7 +28,7 @@ a{color:#00D4FF}.hide{display:none}code{color:#FF6B35}</style></head>
   var origin=location.origin+'/';
   var api=function(m,p,b){var o={method:m,headers:{}};if(b!==undefined){o.headers['Content-Type']='application/json';o.body=JSON.stringify(b)}return fetch(p,o).then(function(r){return r.json().catch(function(){return{}})})};
   var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
-  var TABS=['Build','Connect','Pages','Data','Media','Keys','Settings'];var cur='Build';
+  var TABS=['Connect','Build','Pages','Data','Media','Keys','Settings'];var cur='Connect';
   function renderTabs(){$('tabs').innerHTML=TABS.map(function(t){return '<div class="tab '+(t===cur?'on':'')+'" data-t="'+t+'">'+t+'</div>'}).join('');Array.prototype.forEach.call(document.querySelectorAll('.tab'),function(el){el.onclick=function(){cur=el.getAttribute('data-t');renderTabs();render()}})}
   function render(){var P=$('panel');P.innerHTML='';if(cur==='Build')build(P);else if(cur==='Connect')connect(P);else if(cur==='Pages')pages(P);else if(cur==='Data')data(P);else if(cur==='Media')media(P);else if(cur==='Keys')keys(P);else settings(P)}
 
@@ -49,7 +49,7 @@ a{color:#00D4FF}.hide{display:none}code{color:#FF6B35}</style></head>
   }
   function build(P){
     P.innerHTML=
-      '<div class="card"><h2>Tell Sophia what to build</h2><p>Type it in plain words. Sophia edits your site for you &mdash; no copy-paste, no setup.</p>'
+      '<div class="card"><h2>Type it here <span style="color:#7d93a8;font-size:12px">(optional &mdash; needs an AI key)</span></h2><p>The main way to build is the <b>Connect</b> tab (hand your AI the token; it edits directly). This box is a convenience: add your own AI key in <b>Settings</b>, then just type and the stack builds it for you.</p>'
       +'<textarea id="ask" placeholder="e.g. Make a landing page for my coffee shop with a hero, opening hours, and a contact form. Use warm colors."></textarea>'
       +'<div class="row"><button id="go">Build it</button> <a href="/" target="_blank" style="margin-left:4px">Open site &rarr;</a> <span id="r" style="font-size:13px"></span></div>'
       +'<div id="needkey" class="hide" style="margin-top:10px;font-size:13px;color:#FF6B35">To let Sophia build automatically, add your AI key in <b>Settings</b> (one-time). No key? Use the manual option below with any chatbot.</div></div>'
@@ -118,7 +118,7 @@ a{color:#00D4FF}.hide{display:none}code{color:#FF6B35}</style></head>
       +'Start: read the skill + catalog, then make this first change: set the style to "dark-tech" and rewrite the homepage hero.';
   }
   function connect(P){
-    P.innerHTML='<div class="card"><h2>Connect any AI</h2><p>Mint a key, then copy the one block below into ChatGPT, Claude, Grok, Kimi, DeepSeek — any AI that can browse/call APIs.</p><button id="mint">Mint a key + starter</button>'
+    P.innerHTML='<div class="card"><h2>Connect your AI &mdash; it edits directly, like a CLI</h2><p>Mint a key, then hand your AI three things below: the skill, your URL, and the token. Any AI that can make web requests then posts edits straight to your site &mdash; no Custom GPT, no API key. Works in <b>Claude</b> (add as a Connector), <b>Cursor / Cline / Claude Code</b>, or <b>ChatGPT</b> (agent mode or an Action). A plain chat with no web tool (e.g. the Grok app) can read it but can&apos;t send the request &mdash; that is the app&apos;s limit, not the token.</p><button id="mint">Mint a key + starter</button>'
       +'<div id="ko" class="hide"><div class="label">① One thing to copy — paste into any AI chat <span class="copy" id="cps">copy</span></div><textarea id="starter" readonly style="min-height:200px;font-family:ui-monospace,monospace;font-size:12px"></textarea>'
       +'<div class="label">② Just the key — for a Custom GPT / tool auth field <span class="copy" id="cpk">copy</span></div><div class="field" id="key"></div></div></div>'
       +'<div class="card"><h2>Per-platform (optional, for native tools)</h2>'
