@@ -46,6 +46,12 @@ const G = "https://fonts.googleapis.com/css2?";
 
 // Each preset: { label, fonts:[urls], vars:":root token css", sig:"signature overrides" }
 export const PRESETS = {
+  sophia: {
+    label: "Sophia",
+    fonts: [G + "family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap"],
+    vars: `--bg:#0A1628;--fg:#e8f4f8;--muted:#7d93a8;--accent:#00D4FF;--accent2:#0066FF;--card:rgba(0,212,255,.05);--border:rgba(0,212,255,.18);--radius:14px;--shadow:0 18px 50px -24px rgba(0,0,0,.7);--font-display:'Space Grotesk',Inter,sans-serif;--font-body:Inter,system-ui,sans-serif;--btn-bg:linear-gradient(120deg,#00D4FF,#0066FF);--btn-fg:#04121a;--btn-shadow:0 8px 30px -6px rgba(0,212,255,.5);--maxw:1080px;--sub-mx:auto`,
+    sig: `body{background:radial-gradient(120% 80% at 50% -10%,#0d2036,transparent),var(--bg)}.sx-brand,.sx-h1,.sx-cta-h{background:linear-gradient(120deg,var(--fg) 40%,var(--accent));-webkit-background-clip:text;background-clip:text;color:transparent}.sx-card{backdrop-filter:blur(8px)}.sx-card:hover{border-color:var(--accent);box-shadow:0 0 36px -8px rgba(0,212,255,.4)}.sx-kicker{color:#FF6B35;border-color:rgba(255,107,53,.4)}.sx-stat-v{color:var(--accent)}.sx-hero::before{content:"";position:absolute;inset:-30% -20% auto;height:520px;z-index:-1;background:radial-gradient(40% 50% at 30% 30%,rgba(0,212,255,.35),transparent),radial-gradient(40% 50% at 70% 40%,rgba(255,107,53,.22),transparent);filter:blur(72px)}`,
+  },
   "dark-tech": {
     label: "Dark Tech",
     fonts: [G + "family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap"],
@@ -90,7 +96,7 @@ export const PRESET_NAMES = Object.keys(PRESETS);
 // effects, plus a SEPARATE live-editable custom CSS layer (id=sx-custom-live) the
 // running stack can update in real time (CSS editor, no redeploy).
 export function pageHead(model, route = "/", customCss = "") {
-  const preset = PRESETS[model?.style] || PRESETS["dark-tech"];
+  const preset = PRESETS[model?.style] || PRESETS["sophia"];
   const used = new Set();
   for (const b of model?.pages?.[route]?.blocks || []) (b.fx || []).forEach((f) => used.add(f));
   const fxCss = collectEffectCss([...used]);

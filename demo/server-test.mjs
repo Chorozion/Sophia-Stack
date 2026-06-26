@@ -47,7 +47,7 @@ ok(r.ok, "POST /patch with token -> ok");
 
 // 5. mint an editor token; it can write css but NOT manage tokens
 const mint = await J(await fetch(base + "/api/sophia/tokens", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + admin }, body: JSON.stringify({ label: "llm" }) }));
-ok(mint.token && mint.token.startsWith("sx_"), "admin mints an editor token");
+ok(mint.token && mint.token.startsWith("mykey-"), "admin mints an editor token");
 r = await fetch(base + "/api/sophia/css", { method: "PUT", headers: { "Content-Type": "application/json", Authorization: "Bearer " + mint.token }, body: JSON.stringify({ css: CSS + "/*e*/" }) });
 ok(r.ok, "editor token can edit css");
 r = await fetch(base + "/api/sophia/tokens", { headers: { Authorization: "Bearer " + mint.token } });

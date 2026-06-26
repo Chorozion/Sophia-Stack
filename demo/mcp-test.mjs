@@ -14,10 +14,9 @@ const base = srv.url.replace(/\/$/, "");
 let pass = 0, fail = 0;
 const ok = (c, m) => (c ? (pass++, console.log("  PASS", m)) : (fail++, console.log("  FAIL", m)));
 
-// Mint an agent token via the real setup flow (what a user does once).
-const setup = await (await fetch(base + "/_setup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: "ownerpass1" }) })).json();
-const token = setup.agentToken;
-ok(token && token.startsWith("sx_"), "minted an agent token via /_setup");
+// Get started + mint a key in the dashboard (what a user does once).
+const { token } = await (await import("./_helpers.mjs")).claimAndMint(base);
+ok(token && token.startsWith("mykey-"), "minted a key via Get started + dashboard");
 
 const rpc = (body, token) => fetch(base + "/mcp", {
   method: "POST",

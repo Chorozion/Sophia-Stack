@@ -24,10 +24,13 @@ try {
   ok(home.includes("Your site, built live"), "serves the starter site");
   ok(home.includes("sx-custom-live"), "live CSS layer present");
   const setup = await (await fetch(base + "/_setup")).text();
-  ok(setup.includes("Claim this site"), "first-run setup page (claim with a password)");
-  const s = await (await fetch(base + "/_setup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: "hunter2pw" }) })).json();
-  ok(s.ok && s.agentToken && s.agentToken.startsWith("sx_"), "setup mints an agent token to hand to the AI");
-  const patch = await (await fetch(base + "/api/sophia/patch", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + s.agentToken }, body: JSON.stringify({ ops: [{ op: "set", id: "hero", path: "headline", value: "Built by my agent" }] }) })).json();
+  ok(setup.includes("Get started") || setup.includes("Create account"), "first-run setup page (Get started)");
+  const sr = await fetch(base + "/_setup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: "admin", password: "hunter2pw" }) });
+  const sid = (sr.headers.get("set-cookie") || "").split(";")[0];
+  ok((await sr.json()).ok, "Get started creates the admin account");
+  const mk = await (await fetch(base + "/api/sophia/tokens", { method: "POST", headers: { "Content-Type": "application/json", Cookie: sid }, body: JSON.stringify({ label: "agent" }) })).json();
+  ok(mk.token && mk.token.startsWith("mykey-"), "dashboard mints a mykey- key to hand to the AI");
+  const patch = await (await fetch(base + "/api/sophia/patch", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + mk.token }, body: JSON.stringify({ ops: [{ op: "set", id: "hero", path: "headline", value: "Built by my agent" }] }) })).json();
   ok(patch.ok, "agent token edits the live site via the API");
   const cat = await (await fetch(base + "/api/sophia/catalog")).json();
   ok(cat.blocks && cat.styles, "catalog served for the agent to read");

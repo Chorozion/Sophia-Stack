@@ -9,7 +9,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, chmodSy
 import { join } from "node:path";
 import crypto from "node:crypto";
 
-const newToken = () => "sx_" + crypto.randomBytes(24).toString("base64url");
+const newToken = () => "mykey-" + crypto.randomBytes(24).toString("base64url");
 
 export class Store {
   constructor(dir) {
@@ -82,18 +82,36 @@ export class Store {
     return token;
   }
 
-  // ── Owner password (first-run setup; no console access needed on shared hosting) ──
-  static hasPassword(tokens) { return !!(tokens.auth && tokens.auth.hash); }
-  static setPassword(tokens, password) {
+  // ── Owner admin account (username + password). Created at "Get started";
+  // no console access needed on shared hosting. ──
+  static hasAdmin(tokens) { return !!(tokens.auth && tokens.auth.hash); }
+  static setAdmin(tokens, username, password) {
     const salt = crypto.randomBytes(16).toString("hex");
-    tokens.auth = { salt, hash: crypto.scryptSync(String(password), salt, 64).toString("hex") };
+    tokens.auth = {
+      username: String(username || "admin").trim().slice(0, 64),
+      salt,
+      hash: crypto.scryptSync(String(password), salt, 64).toString("hex"),
+    };
   }
-  static verifyPassword(tokens, password) {
-    if (!Store.hasPassword(tokens)) return false;
+  static verifyAdmin(tokens, username, password) {
+    if (!Store.hasAdmin(tokens)) return false;
+    if (String(username || "").trim() !== tokens.auth.username) return false;
     const h = crypto.scryptSync(String(password), tokens.auth.salt, 64).toString("hex");
     const a = Buffer.from(h), b = Buffer.from(tokens.auth.hash);
     return a.length === b.length && crypto.timingSafeEqual(a, b);
   }
+  static adminUsername(tokens) { return tokens.auth?.username || null; }
+
+  // ── Owner browser sessions (cookie) — how you get into your dashboard ──
+  static addSession(tokens) {
+    const id = "sess-" + crypto.randomBytes(18).toString("base64url");
+    tokens.sessions = tokens.sessions || [];
+    tokens.sessions.push(id);
+    if (tokens.sessions.length > 50) tokens.sessions = tokens.sessions.slice(-50);
+    return id;
+  }
+  static hasSession(tokens, id) { return !!id && (tokens.sessions || []).includes(id); }
+  static clearSession(tokens, id) { tokens.sessions = (tokens.sessions || []).filter((s) => s !== id); }
 }
 
 export { newToken };

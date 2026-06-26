@@ -13,6 +13,15 @@ export function validateModel(model) {
   const errors = [];
   if (!model || typeof model !== "object") return { ok: false, errors: ["model is not an object"] };
   if (!model.pages || typeof model.pages !== "object") errors.push("model.pages missing");
+  // App Model functions layer (optional): named server functions (sandboxed code).
+  if (model.functions !== undefined) {
+    if (typeof model.functions !== "object" || model.functions === null) errors.push("model.functions must be an object");
+    else for (const [name, fn] of Object.entries(model.functions)) {
+      if (!/^[a-z0-9_-]+$/i.test(name)) errors.push(`function name invalid: ${name}`);
+      if (!fn || typeof fn.code !== "string") errors.push(`function ${name}: needs a string 'code'`);
+      else if (fn.code.length > 20000) errors.push(`function ${name}: code too long`);
+    }
+  }
   // App Model data layer (optional): collections with fields + access policy.
   if (model.data !== undefined) {
     if (typeof model.data !== "object" || model.data === null) errors.push("model.data must be an object");

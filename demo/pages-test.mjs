@@ -12,7 +12,7 @@ const srv = await createServer({ dir, port: 0, seedModel: DEFAULT_SITE, quiet: t
 const base = srv.url.replace(/\/$/, "");
 let pass = 0, fail = 0;
 const ok = (c, m) => (c ? (pass++, console.log("  PASS", m)) : (fail++, console.log("  FAIL", m)));
-const token = (await (await fetch(base + "/_setup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: "ownerpass1" }) })).json()).agentToken;
+const { token } = await (await import("./_helpers.mjs")).claimAndMint(base);
 const patch = (ops) => fetch(base + "/api/sophia/patch", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + token }, body: JSON.stringify({ ops }) }).then((r) => r.json());
 const get = (path) => fetch(base + path).then(async (r) => ({ status: r.status, text: await r.text() }));
 

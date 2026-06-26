@@ -16,6 +16,9 @@ import { Store } from "./store.mjs";
 import { EDIT_PANEL } from "./edit-panel.mjs";
 import { validateModel, sanitizeCss } from "./validate.mjs";
 import { DataStore, sanitizeRecord } from "./data-store.mjs";
+import { renderSkill } from "./skill-text.mjs";
+import { MediaStore } from "./media-store.mjs";
+import { runFunction } from "./sandbox.mjs";
 
 const DEFAULT_CLIENT_JS = fileURLToPath(new URL("../public/client.js", import.meta.url));
 const DEFAULT_CATALOG = fileURLToPath(new URL("../catalog.json", import.meta.url));
@@ -30,44 +33,100 @@ const MCP_TOOLS = [
 ];
 
 const readBody = (req) => new Promise((res) => { let b = ""; req.on("data", (c) => (b += c)); req.on("end", () => res(b)); });
+const readBodyBuffer = (req) => new Promise((res) => { const cs = []; req.on("data", (c) => cs.push(c)); req.on("end", () => res(Buffer.concat(cs))); });
 const send = (res, code, obj) => { res.writeHead(code, { "Content-Type": "application/json" }); res.end(JSON.stringify(obj)); };
 
 function setupPage(configured) {
+  const title = configured ? "Sign in" : "Get started";
   const intro = configured
-    ? "This site is already set up. Enter your owner password to mint a fresh agent token."
-    : "Welcome. Set an owner password to claim this site — you'll get an agent token to hand to your AI.";
-  const btn = configured ? "Get a new agent token" : "Claim this site";
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sophia · Setup</title>
-<style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:radial-gradient(120% 80% at 50% -10%,#15152e,transparent),#070710;color:#e8e8f0;font-family:system-ui,sans-serif}
+    ? "Sign in with your admin username and password."
+    : "Create your admin account. This claims the site and gives you a connection to hand your AI.";
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sophia · ${title}</title>
+<style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:radial-gradient(120% 80% at 50% -10%,#0d2036,transparent),#0A1628;color:#e8e8f0;font-family:system-ui,sans-serif}
 .card{width:min(560px,92vw);background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:32px;backdrop-filter:blur(10px)}
-h1{margin:0 0 6px;font-size:22px}p{color:#9aa0b8;margin:0 0 20px;font-size:14px}
-input{width:100%;background:#13131f;border:1px solid #2a2a3a;color:#fff;border-radius:10px;padding:12px;font-size:15px;margin-bottom:12px}
-button{width:100%;background:linear-gradient(120deg,#7c8cff,#c06cff);color:#fff;border:0;border-radius:10px;padding:13px;font-weight:600;font-size:15px;cursor:pointer}
+h1{margin:0 0 6px;font-size:24px}p{color:#7d93a8;margin:0 0 20px;font-size:14px}
+input{width:100%;background:#0d1f30;border:1px solid #2a2a3a;color:#fff;border-radius:10px;padding:13px;font-size:15px;margin-bottom:12px}
+button{width:100%;background:linear-gradient(120deg,#00D4FF,#0066FF);color:#fff;border:0;border-radius:10px;padding:14px;font-weight:600;font-size:16px;cursor:pointer}
 .out{margin-top:18px;display:none}.field{background:#0c0c16;border:1px solid #2a2a3a;border-radius:10px;padding:12px;font-family:ui-monospace,monospace;font-size:13px;word-break:break-all;margin-bottom:10px}
-.label{color:#6f7590;font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}.hand{background:#10101c;border-left:3px solid #7c8cff;padding:12px;border-radius:8px;font-size:13px;color:#cbd0e6;margin-top:8px}.err{color:#ff7676;font-size:13px;margin-top:8px}</style></head>
+.label{color:#5a7a90;font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}.hand{background:#10101c;border-left:3px solid #00D4FF;padding:12px;border-radius:8px;font-size:13px;color:#cbd0e6;margin-top:8px}.err{color:#ff7676;font-size:13px;margin-top:8px}.copy{cursor:pointer;float:right;color:#00D4FF;font-size:11px}</style></head>
 <body><div class="card">
-  <h1>Sophia Stack</h1><p>${intro}</p>
-  <input id="pw" type="password" placeholder="owner password (min 8 chars)" />
-  <button id="go">${btn}</button>
+  <h1>${title}</h1><p>${intro}</p>
+  <input id="user" autocomplete="username" placeholder="admin username" />
+  <input id="pw" type="password" autocomplete="${configured ? "current-password" : "new-password"}" placeholder="${configured ? "password" : "password (min 8 chars)"}" />
+  <button id="go">${configured ? "Sign in" : "Create account & connect my AI"}</button>
   <div id="err" class="err"></div>
   <div id="out" class="out">
-    <div class="label">Agent token</div><div class="field" id="tok"></div>
-    <div class="label">Address</div><div class="field" id="addr"></div>
-    <div class="hand">Hand your AI agent this one line:<br/><b id="hand"></b></div>
+    <h1 style="font-size:18px;margin:6px 0 4px">You're in. Now connect your AI 👇</h1>
+    <p style="margin:0 0 14px">Open ChatGPT, Claude, or Grok and give it these three. It reads the skill and starts building your site.</p>
+    <div class="label">1 · Skill (the instructions)</div><div class="field"><a id="skill" style="color:#00D4FF" target="_blank">…</a></div>
+    <div class="label">2 · Your site URL</div><div class="field" id="url"></div>
+    <div class="label">3 · Agent token</div><div class="field" id="tok"></div>
+    <div class="hand">Tell your AI: “Read <b id="skill2"></b>, then build my website using this token.”</div>
   </div>
 </div>
 <script>
   const $=(id)=>document.getElementById(id);
   $('go').onclick=async()=>{
     $('err').textContent='';
-    const r=await fetch('/_setup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:$('pw').value})});
+    const r=await fetch('/_setup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:$('user').value,password:$('pw').value})});
     const j=await r.json().catch(()=>({}));
     if(!r.ok){$('err').textContent=j.error||('error '+r.status);return;}
-    const addr=location.origin+'/';
-    $('tok').textContent=j.agentToken;$('addr').textContent=addr;
-    $('hand').textContent='Connect to '+addr+' with token '+j.agentToken+' and build my site.';
-    $('out').style.display='block';
+    window.location = j.redirect || '/dashboard';
   };
+</script></body></html>`;
+}
+
+function dashboardPage(username) {
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sophia · Dashboard</title>
+<style>*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(120% 70% at 50% -10%,#0d2036,transparent),#0A1628;color:#e8e8f0;font-family:system-ui,sans-serif}
+.wrap{max-width:760px;margin:0 auto;padding:28px 20px 60px}
+.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}.brand{font-weight:700;font-size:20px}
+.muted{color:#7d93a8;font-size:14px}.logout{color:#7d93a8;font-size:13px;cursor:pointer;background:none;border:1px solid #2a2a3a;border-radius:8px;padding:7px 12px}
+.card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:22px;margin-bottom:16px}
+h2{font-size:16px;margin:0 0 4px}p{color:#7d93a8;font-size:13px;margin:0 0 14px}
+textarea{width:100%;min-height:120px;background:#0d1f30;border:1px solid #2a2a3a;color:#fff;border-radius:10px;padding:12px;font-size:14px;line-height:1.5;resize:vertical}
+button{background:linear-gradient(120deg,#00D4FF,#0066FF);color:#fff;border:0;border-radius:10px;padding:11px 18px;font-weight:600;font-size:14px;cursor:pointer}
+.field{background:#0c0c16;border:1px solid #2a2a3a;border-radius:10px;padding:12px;font-family:ui-monospace,monospace;font-size:13px;word-break:break-all;margin-top:10px}
+.label{color:#5a7a90;font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.ok{color:#5fd38a;font-size:13px}.copy{cursor:pointer;color:#00D4FF;font-size:12px;margin-left:8px}
+a{color:#00D4FF}</style></head>
+<body><div class="wrap">
+  <div class="top"><div class="brand">Sophia · Dashboard</div><button class="logout" id="logout">Log out (${username || "admin"})</button></div>
+
+  <div class="card">
+    <h2>1 · Describe your site</h2><p>What do you want this site to be? Your AI reads this to know what to build.</p>
+    <textarea id="brief" placeholder="e.g. A clean one-page site for my bakery — menu, hours, location, and a contact form."></textarea>
+    <div class="row" style="margin-top:10px"><button id="saveBrief">Save</button> <span class="ok" id="briefOk"></span></div>
+  </div>
+
+  <div class="card">
+    <h2>2 · Connect your AI</h2><p>Mint a key, then give your AI the key + your site URL. It writes the code.</p>
+    <button id="mint">Mint a new key</button>
+    <div id="keyout" style="display:none">
+      <div class="label" style="margin-top:14px">Your key <span class="copy" id="cpk">copy</span></div><div class="field" id="key"></div>
+      <div class="label">Your site URL <span class="copy" id="cpu">copy</span></div><div class="field" id="url"></div>
+      <div class="label">Skill (the instructions)</div><div class="field"><a id="skill" target="_blank">…</a></div>
+      <p style="margin-top:12px">Paste into ChatGPT / Claude / Grok: <i id="say"></i></p>
+    </div>
+  </div>
+
+  <div class="card"><h2>3 · Your live site</h2><p>See what your AI is building.</p>
+    <div class="row"><a href="/" target="_blank">Open site →</a></div></div>
+</div>
+<script>
+  const $=(id)=>document.getElementById(id);
+  fetch('/api/sophia/brief').then(r=>r.json()).then(j=>{$('brief').value=j.brief||''});
+  $('saveBrief').onclick=async()=>{await fetch('/api/sophia/brief',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({brief:$('brief').value})});$('briefOk').textContent='saved ✓';setTimeout(()=>$('briefOk').textContent='',2000)};
+  $('mint').onclick=async()=>{
+    const r=await fetch('/api/sophia/tokens',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({label:'agent'})});
+    const j=await r.json(); if(!j.token)return;
+    const url=location.origin+'/', skill=url+'skill.md';
+    $('key').textContent=j.token; $('url').textContent=url; $('skill').href=skill; $('skill').textContent=skill;
+    $('say').textContent='"Read '+skill+', then build my website using key '+j.token+'."';
+    $('cpk').onclick=()=>navigator.clipboard.writeText(j.token); $('cpu').onclick=()=>navigator.clipboard.writeText(url);
+    $('keyout').style.display='block';
+  };
+  $('logout').onclick=async()=>{await fetch('/_logout',{method:'POST'});location.href='/_setup'};
 </script></body></html>`;
 }
 
@@ -77,6 +136,7 @@ export async function createServer(opts = {}) {
   const catalogPath = opts.catalogPath || DEFAULT_CATALOG;
   const store = new Store(dir);
   const dataStore = new DataStore(dir);   // the app's contained backend (collections)
+  const mediaStore = new MediaStore(dir); // photos / files / video, hosted in-instance
   const loaded = store.load(seedModel);
   let model = loaded.model;
   let css = loaded.css;
@@ -107,6 +167,16 @@ export async function createServer(opts = {}) {
     if (!rec) return null;
     if (roleNeeded === "admin" && rec.role !== "admin") return null;
     return rec;
+  };
+
+  // Owner browser session via cookie (how you reach your dashboard).
+  const cookies = (req) => Object.fromEntries((req.headers.cookie || "").split(";").map((c) => c.trim().split("=").map(decodeURIComponent)).filter((x) => x[0]));
+  const sessionOk = (req) => Store.hasSession(tokens, cookies(req).sid);
+  // Admin = a logged-in owner session OR an admin bearer token.
+  const isAdmin = (req) => sessionOk(req) || !!auth(req, "admin");
+  const setSessionCookie = (res) => {
+    const sid = Store.addSession(tokens); store.saveTokens(tokens);
+    res.setHeader("Set-Cookie", `sid=${sid}; HttpOnly; Path=/; SameSite=Lax; Max-Age=2592000`);
   };
 
   // ── Shared edit operations (one source of truth for REST + MCP) ──
@@ -166,6 +236,10 @@ export async function createServer(opts = {}) {
     if (m === "GET" && p === "/robots.txt") {
       res.writeHead(200, { "Content-Type": "text/plain" });
       return res.end(`User-agent: *\nAllow: /\nSitemap: ${origin(req)}/sitemap.xml\n`);
+    }
+    if (m === "GET" && (p === "/skill.md" || p === "/skill")) {
+      res.writeHead(200, { "Content-Type": "text/markdown; charset=utf-8" });
+      return res.end(renderSkill(origin(req)));
     }
     if (m === "GET" && p === "/llms.txt") {
       const o = origin(req);
@@ -259,25 +333,79 @@ export async function createServer(opts = {}) {
       return send(res, 405, { error: "method not allowed" });
     }
 
+    // ── Media: photos / files / video hosted in the contained instance ──
+    if (m === "GET" && p.startsWith("/media/")) {
+      const got = mediaStore.resolve(p.slice("/media/".length));
+      if (!got) { res.writeHead(404); return res.end("not found"); }
+      res.writeHead(200, { "Content-Type": got.type, "Cache-Control": "public, max-age=86400" });
+      return res.end(got.bytes);
+    }
+    if (p === "/api/media") {
+      if (!isAdmin(req) && !auth(req)) return send(res, 401, { error: "owner or key required" });
+      if (m === "GET") return send(res, 200, { items: mediaStore.list() });
+      if (m === "POST") {
+        try {
+          const buf = await readBodyBuffer(req);
+          const rec = mediaStore.save(buf, { name: req.headers["x-filename"], type: req.headers["content-type"] });
+          return send(res, 200, { ok: true, ...rec });
+        } catch (e) { return send(res, 400, { error: String(e.message || e) }); }
+      }
+    }
+    if (m === "DELETE" && p.startsWith("/api/media/")) {
+      if (!isAdmin(req) && !auth(req)) return send(res, 401, { error: "owner or key required" });
+      return send(res, 200, { ok: true, removed: mediaStore.remove(p.slice("/api/media/".length)) });
+    }
+
+    // ── Custom functions: AI/owner-written server logic, run in a vm sandbox ──
+    if (p.startsWith("/api/fn/")) {
+      const name = p.slice("/api/fn/".length);
+      const fn = model.functions?.[name];
+      if (!fn || typeof fn.code !== "string") return send(res, 404, { error: "no such function" });
+      let input;
+      try { input = m === "GET" ? Object.fromEntries(url.searchParams) : JSON.parse((await readBody(req)) || "{}"); }
+      catch { input = {}; }
+      try {
+        const result = runFunction(fn.code, { input, dataStore, model });
+        return send(res, 200, { ok: true, result });
+      } catch (e) { return send(res, 400, { ok: false, error: String(e.message || e) }); }
+    }
+
     // ── first-run setup: claim ownership with a password, get your agent token ──
     if (m === "GET" && p === "/_setup") {
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-      return res.end(setupPage(Store.hasPassword(tokens)));
+      return res.end(setupPage(Store.hasAdmin(tokens)));
     }
     if (m === "POST" && p === "/_setup") {
       const body = JSON.parse((await readBody(req)) || "{}");
-      if (Store.hasPassword(tokens)) {
-        if (!Store.verifyPassword(tokens, body.password)) return send(res, 401, { error: "already configured; wrong password" });
-        const agentToken = Store.mintToken(tokens, { label: body.label || "agent", role: "editor" });
-        store.saveTokens(tokens);
-        return send(res, 200, { ok: true, agentToken, address: `http://localhost:${port}/` });
+      // Returning owner -> verify and open the dashboard (no separate "login").
+      if (Store.hasAdmin(tokens)) {
+        if (!Store.verifyAdmin(tokens, body.username, body.password)) return send(res, 401, { error: "wrong username or password" });
+        setSessionCookie(res);
+        return send(res, 200, { ok: true, redirect: "/dashboard" });
       }
+      // First run -> "Get started": create the admin account (auto-stored).
+      if (!body.username || String(body.username).trim().length < 2) return send(res, 400, { error: "choose a username (2+ characters)" });
       if (!body.password || String(body.password).length < 8) return send(res, 400, { error: "password must be at least 8 characters" });
-      Store.setPassword(tokens, body.password);
-      const admin = (tokens.tokens || []).find((t) => t.role === "admin");
-      const agentToken = Store.mintToken(tokens, { label: "agent", role: "editor" });
-      store.saveTokens(tokens);
-      return send(res, 200, { ok: true, first: true, adminToken: admin?.token, agentToken, address: `http://localhost:${port}/` });
+      Store.setAdmin(tokens, body.username, body.password);
+      setSessionCookie(res);
+      return send(res, 200, { ok: true, first: true, redirect: "/dashboard" });
+    }
+    if (m === "POST" && p === "/_logout") {
+      Store.clearSession(tokens, cookies(req).sid); store.saveTokens(tokens);
+      res.setHeader("Set-Cookie", "sid=; HttpOnly; Path=/; Max-Age=0");
+      return send(res, 200, { ok: true });
+    }
+    if (m === "GET" && p === "/dashboard") {
+      if (!sessionOk(req)) { res.writeHead(302, { Location: "/_setup" }); return res.end(); }
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      return res.end(dashboardPage(Store.adminUsername(tokens)));
+    }
+    // Site brief: what the owner wants the site to be (the LLM reads this).
+    if (m === "GET" && p === "/api/sophia/brief") return send(res, 200, { brief: model.brief || "" });
+    if (m === "PUT" && p === "/api/sophia/brief") {
+      if (!isAdmin(req)) return send(res, 401, { error: "owner only" });
+      const r = doPatch([{ op: "mset", path: "brief", value: String(JSON.parse((await readBody(req)) || "{}").brief || "").slice(0, 4000) }]);
+      return send(res, r.ok ? 200 : 400, r);
     }
 
     // ── write API (token required) ───────────────────────────────────────
@@ -307,7 +435,7 @@ export async function createServer(opts = {}) {
 
     // ── token management (admin required) ────────────────────────────────
     if (p === "/api/sophia/tokens") {
-      if (!auth(req, "admin")) return send(res, 401, { error: "admin token required" });
+      if (!isAdmin(req)) return send(res, 401, { error: "owner only" });
       if (m === "GET") return send(res, 200, { tokens: (tokens.tokens || []).map((t) => ({ preview: t.token.slice(0, 12) + "…", label: t.label, role: t.role })) });
       if (m === "POST") {
         const body = JSON.parse((await readBody(req)) || "{}");

@@ -43,6 +43,22 @@ const catalog = {
     },
     note: "Only declared collections are reachable. Update/delete always need a token.",
   },
+  // Sandboxed server functions: write real backend logic. Define via mset
+  // functions.<name> = { code }. The code BODY runs in a vm sandbox with `input`
+  // (request data) and `db` (scoped CRUD: list/get/create/update/remove/count);
+  // it `return`s a JSON result. NO require/process/fs/network. Call at /api/fn/<name>.
+  functions: {
+    define: "{op:'mset', path:'functions.subscribe', value:{ code:\"if(!input.email)return{error:'need email'};const r=db.create('subs',{email:input.email});return{ok:true,id:r.id};\" }}",
+    call: "POST or GET /api/fn/<name> (input = body or query) -> { ok, result }",
+    sandbox: "vm-isolated: input, db, JSON/Math/Date only. 1.5s timeout. Returns JSON.",
+  },
+  // Media: host photos / files / video in the instance.
+  media: {
+    upload: "POST /api/media  (raw bytes; headers Content-Type + X-Filename; Bearer key or owner session) -> { url:'/media/<file>' }",
+    serve: "GET /media/<file>",
+    list: "GET /api/media", delete: "DELETE /api/media/<id-or-file>",
+    use: "reference the returned url in blocks (e.g. an html block <img src> / <video src>).",
+  },
   patch_ops: [
     "{op:'set', id, path, value}     — set a block prop (dot path) by id",
     "{op:'add', route, value, index?}— insert a block (value must have id)",
