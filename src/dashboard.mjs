@@ -101,16 +101,17 @@ a{color:#00D4FF}.hide{display:none}code{color:#FF6B35}</style></head>
   }
 
   function starterText(key){
-    return 'You can build and edit my live website through its API. Do what I ask by calling it.\n\n'
-      +'1) Read the instructions: '+origin+'skill.md\n'
-      +'2) Read what is allowed: GET '+origin+'api/sophia/catalog\n'
-      +'3) Read the current site: GET '+origin+'api/sophia/model\n'
-      +'4) Make changes (send header  Authorization: Bearer '+key+'  on every write):\n'
-      +'   - POST '+origin+'api/sophia/patch     edit pages/blocks/style/data/functions\n'
-      +'   - PUT  '+origin+'api/sophia/css       custom CSS\n'
-      +'   - POST '+origin+'api/sophia/rollback  undo the last change\n\n'
-      +'KEY = '+key+'\n\n'
-      +'Start: read the skill + catalog, then tell me what you can do — and make this first change: set the style to "dark-tech" and rewrite the homepage hero.';
+    var n=String.fromCharCode(10);
+    return 'You can build and edit my live website through its API. Do what I ask by calling it.'+n+n
+      +'1) Read the instructions: '+origin+'skill.md'+n
+      +'2) Read what is allowed: GET '+origin+'api/sophia/catalog'+n
+      +'3) Read the current site: GET '+origin+'api/sophia/model'+n
+      +'4) Make changes (send header  Authorization: Bearer '+key+'  on every write):'+n
+      +'   - POST '+origin+'api/sophia/patch     edit pages/blocks/style/data/functions'+n
+      +'   - PUT  '+origin+'api/sophia/css       custom CSS'+n
+      +'   - POST '+origin+'api/sophia/rollback  undo the last change'+n+n
+      +'KEY = '+key+n+n
+      +'Start: read the skill + catalog, then make this first change: set the style to "dark-tech" and rewrite the homepage hero.';
   }
   function connect(P){
     P.innerHTML='<div class="card"><h2>Connect any AI</h2><p>Mint a key, then copy the one block below into ChatGPT, Claude, Grok, Kimi, DeepSeek — any AI that can browse/call APIs.</p><button id="mint">Mint a key + starter</button>'
