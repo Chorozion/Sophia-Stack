@@ -41,6 +41,36 @@ const CORE_FOOTER = `<footer class="sx-core-footer" style="text-align:center;pad
 
 const readBody = (req) => new Promise((res) => { let b = ""; req.on("data", (c) => (b += c)); req.on("end", () => res(b)); });
 const readBodyBuffer = (req) => new Promise((res) => { const cs = []; req.on("data", (c) => cs.push(c)); req.on("end", () => res(Buffer.concat(cs))); });
+
+// Pull a {ops:[...]} patch out of an AI reply (handles code fences + prose).
+function extractPatch(text) {
+  if (!text) return null;
+  let t = String(text).trim();
+  const f = "```";
+  const i = t.indexOf(f);
+  if (i >= 0) { const j = t.indexOf(f, i + 3); if (j > i) t = t.slice(i + 3, j).replace(/^json/i, "").trim(); }
+  try { return JSON.parse(t); } catch {}
+  const s = t.indexOf("{"), e = t.lastIndexOf("}");
+  if (s >= 0 && e > s) { try { return JSON.parse(t.slice(s, e + 1)); } catch {} }
+  const sa = t.indexOf("["), ea = t.lastIndexOf("]");
+  if (sa >= 0 && ea > sa) { try { return JSON.parse(t.slice(sa, ea + 1)); } catch {} }
+  return null;
+}
+// The system prompt that turns a plain request into a valid patch.
+function agentSystemPrompt(catalog, model) {
+  const blocks = Object.keys(catalog.blocks || {}).join(", ");
+  const styles = (Array.isArray(catalog.styles) ? catalog.styles.map((s) => s.id || s.name || s) : Object.keys(catalog.styles || {})).join(", ");
+  return [
+    "You edit a live website by returning a JSON patch. Reply with ONLY a JSON object, no prose, no markdown.",
+    'FORMAT: {"ops":[ ... ]}',
+    "Ops: set/add/remove/move target a block by id (with path/value/index); mset/mdel target a model dot-path (e.g. style, pages./about, data.collections.x, functions.x).",
+    "Allowed block types: " + blocks,
+    "Allowed styles: " + styles,
+    "Keep every block id unique. Only use allowed types/styles. Make minimal, valid edits. Do not remove the logo/about blocks unless asked.",
+    "CURRENT MODEL:",
+    JSON.stringify(model),
+  ].join("\n");
+}
 const send = (res, code, obj) => { res.writeHead(code, { "Content-Type": "application/json" }); res.end(JSON.stringify(obj)); };
 
 const AUTH_CSS = `*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:radial-gradient(120% 80% at 50% -10%,#0d2036,transparent),#0A1628;color:#e8f4f8;font-family:system-ui,sans-serif}
@@ -421,6 +451,51 @@ ${CORE_FOOTER}
       if (!isAdmin(req)) return send(res, 401, { error: "owner only" });
       const r = doPatch([{ op: "mset", path: "brief", value: String(JSON.parse((await readBody(req)) || "{}").brief || "").slice(0, 4000) }]);
       return send(res, r.ok ? 200 : 400, r);
+    }
+
+    // ── Built-in AI builder: the owner's key lets the STACK call an AI and apply ──
+    if (m === "GET" && p === "/api/sophia/llm") {
+      if (!isAdmin(req)) return send(res, 401, { error: "owner only" });
+      const l = tokens.llm || {};
+      return send(res, 200, { configured: !!l.apiKey, provider: l.provider || "openai", baseURL: l.baseURL || "https://api.openai.com/v1", model: l.model || "gpt-4o-mini" });
+    }
+    if (m === "PUT" && p === "/api/sophia/llm") {
+      if (!isAdmin(req)) return send(res, 401, { error: "owner only" });
+      const b = JSON.parse((await readBody(req)) || "{}");
+      const prev = tokens.llm || {};
+      tokens.llm = {
+        provider: String(b.provider || prev.provider || "openai").slice(0, 40),
+        baseURL: String(b.baseURL || prev.baseURL || "https://api.openai.com/v1").trim().slice(0, 300),
+        model: String(b.model || prev.model || "gpt-4o-mini").trim().slice(0, 100),
+        apiKey: b.apiKey ? String(b.apiKey).trim().slice(0, 300) : prev.apiKey || "",
+      };
+      store.saveTokens(tokens);
+      return send(res, 200, { ok: true });
+    }
+    // Type a request -> the stack asks the owner's AI for a patch -> applies it. No copy-paste.
+    if (m === "POST" && p === "/api/sophia/agent") {
+      if (!isAdmin(req)) return send(res, 401, { error: "owner only" });
+      const llm = tokens.llm || {};
+      if (!llm.apiKey) return send(res, 400, { error: "no_llm", message: "Add your AI key in Settings first." });
+      const message = String((JSON.parse((await readBody(req)) || "{}").message) || "").slice(0, 4000);
+      if (!message) return send(res, 400, { error: "empty", message: "Tell Sophia what to build." });
+      let catalog; try { catalog = JSON.parse(readFileSync(catalogPath, "utf8")); } catch { catalog = { blocks: {}, styles: [] }; }
+      const payload = { model: llm.model || "gpt-4o-mini", temperature: 0.4, messages: [
+        { role: "system", content: agentSystemPrompt(catalog, model) },
+        { role: "user", content: message },
+      ] };
+      try {
+        const url = (llm.baseURL || "https://api.openai.com/v1").replace(/\/+$/, "") + "/chat/completions";
+        const lr = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + llm.apiKey }, body: JSON.stringify(payload) });
+        const lj = await lr.json().catch(() => ({}));
+        if (!lr.ok) return send(res, 502, { error: "llm_error", message: (lj.error && lj.error.message) || ("AI error " + lr.status) });
+        const text = (lj.choices && lj.choices[0] && lj.choices[0].message && lj.choices[0].message.content) || "";
+        const patch = extractPatch(text);
+        const ops = patch && (patch.ops || (Array.isArray(patch) ? patch : null));
+        if (!ops) return send(res, 200, { ok: false, applied: false, message: "The AI did not return a valid change. Try rephrasing.", reply: text.slice(0, 500) });
+        const result = doPatch(ops);
+        return send(res, 200, { ok: !!result.ok, applied: !!result.ok, changed: result.changed || null, error: result.error || null, details: result.details || null });
+      } catch (e) { return send(res, 502, { error: "llm_unreachable", message: String(e.message || e) }); }
     }
 
     // ── Optional Google sign-in (Option A: owner brings their own OAuth app) ──

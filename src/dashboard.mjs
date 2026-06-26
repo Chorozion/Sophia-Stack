@@ -49,21 +49,25 @@ a{color:#00D4FF}.hide{display:none}code{color:#FF6B35}</style></head>
   }
   function build(P){
     P.innerHTML=
-      '<div class="card"><h2>Build your site with any AI</h2>'
-      +'<p>No setup, no Custom GPT. Works with ChatGPT, Claude, Grok, Kimi, DeepSeek (free accounts too). You copy a prompt out, paste the reply back — that is the whole thing.</p>'
-      +'<ol style="color:#9fc7d6;font-size:13px;line-height:1.9;padding-left:18px;margin:0">'
-      +'<li>Type what you want in box 1.</li>'
-      +'<li>Press <b>Copy the prompt</b>.</li>'
-      +'<li>Open ChatGPT (or any AI), paste, send.</li>'
-      +'<li>Copy the entire reply the AI gives you.</li>'
-      +'<li>Paste it into box 2 and press <b>Apply to my site</b>.</li>'
-      +'<li>Press <b>Open site</b> to see the change.</li></ol></div>'
-      +'<div class="card"><h2>1 &middot; What do you want?</h2>'
-      +'<textarea id="want" placeholder="e.g. Make this a landing page for my coffee shop: a hero with the name Bean There, a short about section, opening hours, and a contact form. Use warm colors."></textarea>'
-      +'<div class="row"><button id="genp">Copy the prompt</button> <span class="ok" id="gok"></span></div></div>'
-      +'<div class="card"><h2>2 &middot; Paste the reply from the AI</h2>'
-      +'<textarea id="reply" placeholder="Paste everything the AI replied here."></textarea>'
-      +'<div class="row"><button id="applyb">Apply to my site</button> <a href="/" target="_blank" style="margin-left:6px">Open site &rarr;</a> <span id="ares" style="font-size:13px"></span></div></div>';
+      '<div class="card"><h2>Tell Sophia what to build</h2><p>Type it in plain words. Sophia edits your site for you &mdash; no copy-paste, no setup.</p>'
+      +'<textarea id="ask" placeholder="e.g. Make a landing page for my coffee shop with a hero, opening hours, and a contact form. Use warm colors."></textarea>'
+      +'<div class="row"><button id="go">Build it</button> <a href="/" target="_blank" style="margin-left:4px">Open site &rarr;</a> <span id="r" style="font-size:13px"></span></div>'
+      +'<div id="needkey" class="hide" style="margin-top:10px;font-size:13px;color:#FF6B35">To let Sophia build automatically, add your AI key in <b>Settings</b> (one-time). No key? Use the manual option below with any chatbot.</div></div>'
+      +'<div class="card"><h2>Manual &middot; any chatbot, no AI key</h2><p>Copy a prompt out, paste the reply back. Works with any AI (free accounts too).</p>'
+      +'<textarea id="want" placeholder="What do you want? e.g. a landing page for my coffee shop with hours and a contact form."></textarea>'
+      +'<div class="row"><button id="genp" class="ghost">1 &middot; Copy the prompt</button> <span class="ok" id="gok"></span></div>'
+      +'<textarea id="reply" placeholder="2 · Paste everything the AI replied here." style="margin-top:10px"></textarea>'
+      +'<div class="row"><button id="applyb" class="ghost">Apply to my site</button> <span id="ares" style="font-size:13px"></span></div></div>';
+    // Built-in agent: the stack calls the owner's AI and applies the result.
+    $('go').onclick=function(){
+      var msg=$('ask').value.trim(); if(!msg){$('r').textContent='Type what you want first.';return}
+      $('r').textContent='Sophia is building...';
+      api('POST','/api/sophia/agent',{message:msg}).then(function(j){
+        if(j&&j.applied){$('r').innerHTML='<span class="ok">Done! Press Open site to see it.</span>';$('ask').value=''}
+        else if(j&&j.error==='no_llm'){$('r').textContent='';$('needkey').classList.remove('hide')}
+        else{$('r').innerHTML='<span style="color:#ff8a8a">'+esc((j&&j.message)||(j&&j.error)||'failed')+'</span>'}
+      });
+    };
     var cat=null,mdl=null;
     Promise.all([api('GET','/api/sophia/catalog'),api('GET','/api/sophia/model')]).then(function(r){cat=r[0];mdl=r[1]});
     $('genp').onclick=function(){
@@ -158,7 +162,10 @@ a{color:#00D4FF}.hide{display:none}code{color:#FF6B35}</style></head>
     });
   }
   function settings(P){
-    P.innerHTML='<div class="card"><h2>Describe your site</h2><p>Your AI reads this to know what to build.</p><textarea id="brief"></textarea><div class="row"><button id="sb">Save</button> <span class="ok" id="bok"></span></div></div>'
+    P.innerHTML='<div class="card"><h2>AI key &mdash; let Sophia build for you</h2><p>Paste an AI API key and Sophia builds your site from the chat box on the Build tab (no copy-paste). Works with OpenAI or any OpenAI-compatible provider (DeepSeek, Groq, OpenRouter, a local model).</p>'
+      +'<div class="label">API key</div><input id="lk" placeholder="(leave blank to keep current)"><div class="label">Model</div><input id="lm" placeholder="gpt-4o-mini"><div class="label">API base URL (advanced)</div><input id="lb" placeholder="https://api.openai.com/v1">'
+      +'<div class="row"><button id="sl">Save</button> <span class="ok" id="lok"></span></div></div>'
+      +'<div class="card"><h2>Describe your site</h2><p>Your AI reads this to know what to build.</p><textarea id="brief"></textarea><div class="row"><button id="sb">Save</button> <span class="ok" id="bok"></span></div></div>'
       +'<div class="card"><h2>Sign in with Google <span style="color:#7d93a8;font-size:12px">(optional)</span></h2><p>Set up your OWN Google OAuth app, paste the credentials here, and you can sign in with Google. Redirect URL: <code>'+esc(origin)+'auth/google/callback</code></p>'
       +'<label class="row" style="margin-bottom:8px"><input type="checkbox" id="oe" style="width:auto;margin:0"> Enable Google sign-in</label>'
       +'<div class="label">Client ID</div><input id="ocid"><div class="label">Client Secret</div><input id="ocs" placeholder="(leave blank to keep current)"><div class="label">Your Google email (only this account may sign in)</div><input id="oem">'
@@ -167,6 +174,8 @@ a{color:#00D4FF}.hide{display:none}code{color:#FF6B35}</style></head>
     $('sb').onclick=function(){api('PUT','/api/sophia/brief',{brief:$('brief').value}).then(function(){$('bok').textContent='saved ✓';setTimeout(function(){$('bok').textContent=''},2000)})};
     api('GET','/api/sophia/oauth').then(function(j){$('oe').checked=!!j.enabled;$('ocid').value=j.clientId||'';$('oem').value=j.allowedEmail||''});
     $('so').onclick=function(){var b={enabled:$('oe').checked,provider:'google',clientId:$('ocid').value,allowedEmail:$('oem').value};if($('ocs').value)b.clientSecret=$('ocs').value;api('PUT','/api/sophia/oauth',b).then(function(){$('ook').textContent='saved ✓';setTimeout(function(){$('ook').textContent=''},2000)})};
+    api('GET','/api/sophia/llm').then(function(j){$('lm').value=j.model||'';$('lb').value=j.baseURL||'';if(j.configured)$('lk').placeholder='(saved — leave blank to keep)'});
+    $('sl').onclick=function(){var b={model:$('lm').value,baseURL:$('lb').value};if($('lk').value)b.apiKey=$('lk').value;api('PUT','/api/sophia/llm',b).then(function(){$('lok').textContent='saved ✓';$('lk').value='';setTimeout(function(){$('lok').textContent=''},2000)})};
   }
   $('logout').onclick=function(){fetch('/_logout',{method:'POST'}).then(function(){location.href='/_setup'})};
   renderTabs();render();
