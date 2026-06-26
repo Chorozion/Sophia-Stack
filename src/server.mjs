@@ -19,6 +19,7 @@ import { DataStore, sanitizeRecord } from "./data-store.mjs";
 import { renderSkill } from "./skill-text.mjs";
 import { MediaStore } from "./media-store.mjs";
 import { runFunction } from "./sandbox.mjs";
+import { dashboardPage } from "./dashboard.mjs";
 
 const DEFAULT_CLIENT_JS = fileURLToPath(new URL("../public/client.js", import.meta.url));
 const DEFAULT_CATALOG = fileURLToPath(new URL("../catalog.json", import.meta.url));
@@ -50,7 +51,7 @@ button{width:100%;background:linear-gradient(120deg,#00D4FF,#0066FF);color:#0412
 .out{margin-top:18px;display:none}.code{background:#0c1a28;border:1px dashed #FF6B35;border-radius:10px;padding:14px;font-family:ui-monospace,monospace;font-size:14px;word-break:break-all;color:#ffd9c2}
 .err{color:#ff7676;font-size:13px;margin-top:8px}.link{display:block;text-align:center;margin-top:16px;color:#7d93a8;font-size:13px}.warn{color:#FF6B35;font-weight:600}`;
 
-function setupPage(configured) {
+function setupPage(configured, googleOn) {
   const title = configured ? "Access your dashboard" : "Get started";
   const intro = configured ? "Enter your admin username and password." : "Create your admin account to claim this site.";
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sophia · ${title}</title><style>${AUTH_CSS}</style></head>
@@ -61,6 +62,7 @@ function setupPage(configured) {
     <input id="pw" type="password" autocomplete="${configured ? "current-password" : "new-password"}" placeholder="${configured ? "password" : "password (min 8 chars)"}" />
     <button id="go">${configured ? "Open dashboard" : "Create account"}</button>
     <div id="err" class="err"></div>
+    ${configured && googleOn ? '<a class="link" href="/auth/google" style="display:block;text-align:center;margin-top:10px;padding:11px;border:1px solid rgba(0,212,255,.3);border-radius:10px;color:#00D4FF;text-decoration:none">Sign in with Google</a>' : ""}
     <a class="link" href="/_recover">Lost access, or someone else got in? Recover →</a>
   </div>
   <div id="out" class="out">
@@ -88,7 +90,7 @@ function recoverPage() {
 <body><div class="card">
   <div id="form">
     <h1>Recover ownership</h1><p>Enter your recovery code and set a new admin login. This <b class="warn">logs out everyone and revokes all keys</b> — instantly locking out anyone who had access.</p>
-    <input id="code" placeholder="recovery code (recover-...)" />
+    <input id="code" placeholder="your five-word recovery string" />
     <input id="user" autocomplete="username" placeholder="new admin username" />
     <input id="pw" type="password" autocomplete="new-password" placeholder="new password (min 8 chars)" />
     <button id="go">Recover & lock it down</button>
@@ -115,59 +117,6 @@ function recoverPage() {
 </script></body></html>`;
 }
 
-function dashboardPage(username) {
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sophia · Dashboard</title>
-<style>*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(120% 70% at 50% -10%,#0d2036,transparent),#0A1628;color:#e8e8f0;font-family:system-ui,sans-serif}
-.wrap{max-width:760px;margin:0 auto;padding:28px 20px 60px}
-.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}.brand{font-weight:700;font-size:20px}
-.muted{color:#7d93a8;font-size:14px}.logout{color:#7d93a8;font-size:13px;cursor:pointer;background:none;border:1px solid #2a2a3a;border-radius:8px;padding:7px 12px}
-.card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:22px;margin-bottom:16px}
-h2{font-size:16px;margin:0 0 4px}p{color:#7d93a8;font-size:13px;margin:0 0 14px}
-textarea{width:100%;min-height:120px;background:#0d1f30;border:1px solid #2a2a3a;color:#fff;border-radius:10px;padding:12px;font-size:14px;line-height:1.5;resize:vertical}
-button{background:linear-gradient(120deg,#00D4FF,#0066FF);color:#fff;border:0;border-radius:10px;padding:11px 18px;font-weight:600;font-size:14px;cursor:pointer}
-.field{background:#0c0c16;border:1px solid #2a2a3a;border-radius:10px;padding:12px;font-family:ui-monospace,monospace;font-size:13px;word-break:break-all;margin-top:10px}
-.label{color:#5a7a90;font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
-.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.ok{color:#5fd38a;font-size:13px}.copy{cursor:pointer;color:#00D4FF;font-size:12px;margin-left:8px}
-a{color:#00D4FF}</style></head>
-<body><div class="wrap">
-  <div class="top"><div class="brand">Sophia · Dashboard</div><button class="logout" id="logout">Log out (${username || "admin"})</button></div>
-
-  <div class="card">
-    <h2>1 · Describe your site</h2><p>What do you want this site to be? Your AI reads this to know what to build.</p>
-    <textarea id="brief" placeholder="e.g. A clean one-page site for my bakery — menu, hours, location, and a contact form."></textarea>
-    <div class="row" style="margin-top:10px"><button id="saveBrief">Save</button> <span class="ok" id="briefOk"></span></div>
-  </div>
-
-  <div class="card">
-    <h2>2 · Connect your AI</h2><p>Mint a key, then give your AI the key + your site URL. It writes the code.</p>
-    <button id="mint">Mint a new key</button>
-    <div id="keyout" style="display:none">
-      <div class="label" style="margin-top:14px">Your key <span class="copy" id="cpk">copy</span></div><div class="field" id="key"></div>
-      <div class="label">Your site URL <span class="copy" id="cpu">copy</span></div><div class="field" id="url"></div>
-      <div class="label">Skill (the instructions)</div><div class="field"><a id="skill" target="_blank">…</a></div>
-      <p style="margin-top:12px">Paste into ChatGPT / Claude / Grok: <i id="say"></i></p>
-    </div>
-  </div>
-
-  <div class="card"><h2>3 · Your live site</h2><p>See what your AI is building.</p>
-    <div class="row"><a href="/" target="_blank">Open site →</a></div></div>
-</div>
-<script>
-  const $=(id)=>document.getElementById(id);
-  fetch('/api/sophia/brief').then(r=>r.json()).then(j=>{$('brief').value=j.brief||''});
-  $('saveBrief').onclick=async()=>{await fetch('/api/sophia/brief',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({brief:$('brief').value})});$('briefOk').textContent='saved ✓';setTimeout(()=>$('briefOk').textContent='',2000)};
-  $('mint').onclick=async()=>{
-    const r=await fetch('/api/sophia/tokens',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({label:'agent'})});
-    const j=await r.json(); if(!j.token)return;
-    const url=location.origin+'/', skill=url+'skill.md';
-    $('key').textContent=j.token; $('url').textContent=url; $('skill').href=skill; $('skill').textContent=skill;
-    $('say').textContent='"Read '+skill+', then build my website using key '+j.token+'."';
-    $('cpk').onclick=()=>navigator.clipboard.writeText(j.token); $('cpu').onclick=()=>navigator.clipboard.writeText(url);
-    $('keyout').style.display='block';
-  };
-  $('logout').onclick=async()=>{await fetch('/_logout',{method:'POST'});location.href='/_setup'};
-</script></body></html>`;
-}
 
 export async function createServer(opts = {}) {
   const { dir, port = 4321, route = "/", seedModel = null, refreshMs = 15000, quiet = false } = opts;
@@ -211,8 +160,10 @@ export async function createServer(opts = {}) {
   // Owner browser session via cookie (how you reach your dashboard).
   const cookies = (req) => Object.fromEntries((req.headers.cookie || "").split(";").map((c) => c.trim().split("=").map(decodeURIComponent)).filter((x) => x[0]));
   const sessionOk = (req) => Store.hasSession(tokens, cookies(req).sid);
-  // Admin = a logged-in owner session OR an admin bearer token.
+  // Admin = a logged-in owner session OR an admin bearer token (sensitive ops).
   const isAdmin = (req) => sessionOk(req) || !!auth(req, "admin");
+  // canEdit = owner session OR any valid key (editor/admin) — for building the site.
+  const canEdit = (req) => sessionOk(req) || !!auth(req);
   const setSessionCookie = (res) => {
     const sid = Store.addSession(tokens); store.saveTokens(tokens);
     res.setHeader("Set-Cookie", `sid=${sid}; HttpOnly; Path=/; SameSite=Lax; Max-Age=2592000`);
@@ -342,7 +293,7 @@ ${CORE_FOOTER}
       const def = model.data?.collections?.[col];
       if (!def) return send(res, 404, { error: "unknown collection" });
       const acc = def.access || {};
-      const tokenOk = !!auth(req);
+      const tokenOk = canEdit(req);
       const can = (action, fallback = "token") => {
         const pol = acc[action] || fallback;
         return pol === "public" || (pol === "token" && tokenOk);
@@ -381,7 +332,7 @@ ${CORE_FOOTER}
       return res.end(got.bytes);
     }
     if (p === "/api/media") {
-      if (!isAdmin(req) && !auth(req)) return send(res, 401, { error: "owner or key required" });
+      if (!canEdit(req)) return send(res, 401, { error: "owner or key required" });
       if (m === "GET") return send(res, 200, { items: mediaStore.list() });
       if (m === "POST") {
         try {
@@ -392,7 +343,7 @@ ${CORE_FOOTER}
       }
     }
     if (m === "DELETE" && p.startsWith("/api/media/")) {
-      if (!isAdmin(req) && !auth(req)) return send(res, 401, { error: "owner or key required" });
+      if (!canEdit(req)) return send(res, 401, { error: "owner or key required" });
       return send(res, 200, { ok: true, removed: mediaStore.remove(p.slice("/api/media/".length)) });
     }
 
@@ -413,7 +364,7 @@ ${CORE_FOOTER}
     // ── first-run setup: claim ownership with a password, get your agent token ──
     if (m === "GET" && p === "/_setup") {
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-      return res.end(setupPage(Store.hasAdmin(tokens)));
+      return res.end(setupPage(Store.hasAdmin(tokens), !!(tokens.oauth?.enabled && tokens.oauth?.clientId)));
     }
     if (m === "POST" && p === "/_setup") {
       const body = JSON.parse((await readBody(req)) || "{}");
@@ -466,15 +417,61 @@ ${CORE_FOOTER}
       return send(res, r.ok ? 200 : 400, r);
     }
 
+    // ── Optional Google sign-in (Option A: owner brings their own OAuth app) ──
+    if (m === "GET" && p === "/api/sophia/oauth") {
+      if (!isAdmin(req)) return send(res, 401, { error: "owner only" });
+      const o = tokens.oauth || {};
+      return send(res, 200, { enabled: !!o.enabled, provider: "google", clientId: o.clientId || "", allowedEmail: o.allowedEmail || "" });
+    }
+    if (m === "PUT" && p === "/api/sophia/oauth") {
+      if (!isAdmin(req)) return send(res, 401, { error: "owner only" });
+      const b = JSON.parse((await readBody(req)) || "{}");
+      const prev = tokens.oauth || {};
+      tokens.oauth = {
+        enabled: !!b.enabled, provider: "google",
+        clientId: String(b.clientId || "").trim().slice(0, 300),
+        clientSecret: b.clientSecret ? String(b.clientSecret).trim().slice(0, 300) : prev.clientSecret || "",
+        allowedEmail: String(b.allowedEmail || "").trim().toLowerCase().slice(0, 200),
+      };
+      store.saveTokens(tokens);
+      return send(res, 200, { ok: true });
+    }
+    if (m === "GET" && p === "/auth/google") {
+      const o = tokens.oauth || {};
+      if (!o.enabled || !o.clientId) return send(res, 400, { error: "Google sign-in is not configured" });
+      const u = new URL("https://accounts.google.com/o/oauth2/v2/auth");
+      u.searchParams.set("client_id", o.clientId);
+      u.searchParams.set("redirect_uri", origin(req) + "auth/google/callback");
+      u.searchParams.set("response_type", "code");
+      u.searchParams.set("scope", "openid email");
+      res.writeHead(302, { Location: u.toString() }); return res.end();
+    }
+    if (m === "GET" && p === "/auth/google/callback") {
+      const o = tokens.oauth || {};
+      const code = url.searchParams.get("code");
+      if (!o.enabled || !o.clientId || !code) { res.writeHead(302, { Location: "/_setup" }); return res.end(); }
+      try {
+        const tok = await (await fetch("https://oauth2.googleapis.com/token", {
+          method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({ code, client_id: o.clientId, client_secret: o.clientSecret, redirect_uri: origin(req) + "auth/google/callback", grant_type: "authorization_code" }),
+        })).json();
+        // id_token came straight from Google's authenticated token endpoint -> trust its payload.
+        const claims = tok.id_token ? JSON.parse(Buffer.from(tok.id_token.split(".")[1], "base64").toString()) : null;
+        const email = claims && claims.email_verified !== false ? String(claims.email || "").toLowerCase() : "";
+        if (email && email === o.allowedEmail) { setSessionCookie(res); res.writeHead(302, { Location: "/dashboard" }); return res.end(); }
+      } catch {}
+      res.writeHead(302, { Location: "/_setup?oauth=denied" }); return res.end();
+    }
+
     // ── write API (token required) ───────────────────────────────────────
     if (m === "PUT" && p === "/api/sophia/css") {
-      if (!auth(req)) return send(res, 401, { error: "editor token required" });
+      if (!canEdit(req)) return send(res, 401, { error: "owner or key required" });
       const body = JSON.parse((await readBody(req)) || "{}");
       const r = doSetCss(body.css);
       return send(res, r.ok ? 200 : (r.code || 400), r);
     }
     if (m === "POST" && p === "/api/sophia/patch") {
-      if (!auth(req)) return send(res, 401, { error: "editor token required" });
+      if (!canEdit(req)) return send(res, 401, { error: "owner or key required" });
       try {
         const { ops } = JSON.parse((await readBody(req)) || "{}");
         const r = doPatch(ops);
@@ -482,7 +479,7 @@ ${CORE_FOOTER}
       } catch (e) { return send(res, 400, { error: String(e.message || e) }); }
     }
     if (m === "POST" && p === "/api/sophia/rollback") {
-      if (!auth(req)) return send(res, 401, { error: "editor token required" });
+      if (!canEdit(req)) return send(res, 401, { error: "owner or key required" });
       const r = doRollback();
       return send(res, r.ok ? 200 : (r.code || 400), r);
     }
