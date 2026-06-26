@@ -2,13 +2,9 @@
 // Action. Served at /openapi.json with the server URL set to THIS deployment's
 // origin, so a GPT can import it from any installed site. Bearer = a mykey- token.
 export function openapiSpec(origin) {
-  const VALUE = {
-    description: "Value for the operation (any JSON).",
-    oneOf: [
-      { type: "string" }, { type: "number" }, { type: "boolean" },
-      { type: "object", additionalProperties: true }, { type: "array", items: {} }, { type: "null" },
-    ],
-  };
+  // Bare schema = "any JSON" (string/number/boolean/object/array/null). Avoid
+  // oneOf here — ChatGPT's Action importer chokes on it.
+  const VALUE = { description: "Value for the operation — any JSON (string, number, boolean, object, array, or null)." };
   const OK = { description: "Result", content: { "application/json": { schema: { type: "object", additionalProperties: true } } } };
   return {
     openapi: "3.1.0",
@@ -20,6 +16,16 @@ export function openapiSpec(origin) {
     servers: [{ url: origin }],
     security: [{ bearerAuth: [] }],
     paths: {
+      "/api/sophia/ping": {
+        get: {
+          operationId: "sophiaPing", summary: "Health + token check (call this first)",
+          description: "Verifies the connection and whether the configured token can write. Does NOT change the site. Returns { ok, site, canWrite }.",
+          responses: { 200: { description: "Status", content: { "application/json": { schema: {
+            type: "object",
+            properties: { ok: { type: "boolean" }, site: { type: "string" }, canWrite: { type: "boolean" } },
+          } } } } },
+        },
+      },
       "/api/sophia/catalog": {
         get: {
           operationId: "sophiaCatalog", summary: "Read the capability catalog (call FIRST)",

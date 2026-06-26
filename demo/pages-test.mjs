@@ -49,7 +49,12 @@ ok(!cssTry.ok, "custom CSS cannot hide the protected footer");
 
 // 7. OpenAPI schema for a ChatGPT Custom GPT Action (dynamic server url)
 const oas = JSON.parse((await get("/openapi.json")).text);
-ok(oas.openapi === "3.1.0" && oas.servers[0].url.endsWith(new URL(base).host) && oas.paths["/api/sophia/patch"] && oas.components.securitySchemes.bearerAuth, "/openapi.json: valid schema, server url = this origin, bearer auth");
+ok(oas.openapi === "3.1.0" && oas.servers[0].url.endsWith(new URL(base).host) && oas.paths["/api/sophia/patch"] && oas.paths["/api/sophia/ping"] && oas.components.securitySchemes.bearerAuth, "/openapi.json: valid schema, server url = this origin, ping + bearer auth");
+
+// 8. ping: connection always ok; canWrite reflects the token (GPT verifies before editing)
+const pingNo = await (await fetch(base + "/api/sophia/ping")).json();
+const pingYes = await (await fetch(base + "/api/sophia/ping", { headers: { Authorization: "Bearer " + token } })).json();
+ok(pingNo.ok === true && pingNo.canWrite === false && pingYes.ok === true && pingYes.canWrite === true, "ping: ok always; canWrite true only with a valid key");
 
 console.log(`\n  ${pass} passed, ${fail} failed`);
 srv.close();

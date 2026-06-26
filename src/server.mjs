@@ -252,6 +252,8 @@ ${CORE_FOOTER}
     }
 
     // ── public read API ──────────────────────────────────────────────────
+    // Health + token check: lets an AI verify its key/connection before editing.
+    if (m === "GET" && p === "/api/sophia/ping") return send(res, 200, { ok: true, site: model.site || host(req), host: host(req), canWrite: canEdit(req) });
     if (m === "GET" && p === "/api/sophia/model") return send(res, 200, model);
     if (m === "GET" && p === "/api/sophia/data") return send(res, 200, data);
     if (m === "GET" && p === "/api/sophia/css") return send(res, 200, { css });
