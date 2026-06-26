@@ -243,6 +243,16 @@ ${CORE_FOOTER}
     const p = url.pathname;
     const m = req.method;
 
+    // CORS so browser-based MCP/tool clients can reach the API + MCP endpoint.
+    if (p === "/mcp" || p.startsWith("/api/")) {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, Mcp-Session-Id");
+      res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    }
+    if (m === "OPTIONS") { res.writeHead(204); return res.end(); }
+    // Some MCP clients probe the endpoint with GET before POSTing JSON-RPC.
+    if (m === "GET" && p === "/mcp") return send(res, 200, { name: "sophia-stack", transport: "http", protocolVersion: "2024-11-05", note: "POST JSON-RPC 2.0 here (initialize, tools/list, tools/call). Bearer token for writes." });
+
     // ── site + live preview ──────────────────────────────────────────────
     if (m === "GET" && p === "/") { res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" }); return res.end(shell("/")); }
     if (m === "GET" && p === "/client.js") { res.writeHead(200, { "Content-Type": "text/javascript; charset=utf-8" }); return res.end(readFileSync(clientJs)); }
