@@ -205,6 +205,18 @@ export async function createServer(opts = {}) {
   const isAdmin = (req) => sessionOk(req) || !!auth(req, "admin");
   // canEdit = owner session OR any valid key (editor/admin) — for building the site.
   const canEdit = (req) => sessionOk(req) || !!auth(req);
+
+  // Brute-force guard for login + recovery: lock an IP for 15 min after 8 fails.
+  const authFails = new Map();
+  const clientIp = (req) => (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || (req.socket && req.socket.remoteAddress) || "?";
+  const guardOk = (req) => { const e = authFails.get(clientIp(req)); return !(e && e.until > Date.now()); };
+  const guardFail = (req) => {
+    const ip = clientIp(req); const e = authFails.get(ip) || { n: 0, until: 0 };
+    if (++e.n >= 8) { e.until = Date.now() + 15 * 60 * 1000; e.n = 0; }
+    if (authFails.size > 5000) authFails.clear();
+    authFails.set(ip, e);
+  };
+  const guardClear = (req) => authFails.delete(clientIp(req));
   const setSessionCookie = (res) => {
     const sid = Store.addSession(tokens); store.saveTokens(tokens);
     res.setHeader("Set-Cookie", `sid=${sid}; HttpOnly; Path=/; SameSite=Lax; Max-Age=2592000`);
@@ -427,8 +439,9 @@ ${CORE_FOOTER}
       const body = JSON.parse((await readBody(req)) || "{}");
       // Returning owner -> verify and open the dashboard (no separate "login").
       if (Store.hasAdmin(tokens)) {
-        if (!Store.verifyAdmin(tokens, body.username, body.password)) return send(res, 401, { error: "wrong username or password" });
-        setSessionCookie(res);
+        if (!guardOk(req)) return send(res, 429, { error: "too many attempts — wait 15 minutes" });
+        if (!Store.verifyAdmin(tokens, body.username, body.password)) { guardFail(req); return send(res, 401, { error: "wrong username or password" }); }
+        guardClear(req); setSessionCookie(res);
         return send(res, 200, { ok: true, redirect: "/dashboard" });
       }
       // First run -> "Get started": create the admin account (auto-stored).
@@ -446,8 +459,9 @@ ${CORE_FOOTER}
     }
     if (m === "POST" && p === "/_recover") {
       const body = JSON.parse((await readBody(req)) || "{}");
+      if (!guardOk(req)) return send(res, 429, { error: "too many attempts — wait 15 minutes" });
       if (!Store.hasRecovery(tokens)) return send(res, 400, { error: "nothing to recover" });
-      if (!Store.verifyRecovery(tokens, body.code)) return send(res, 401, { error: "wrong recovery code" });
+      if (!Store.verifyRecovery(tokens, body.code)) { guardFail(req); return send(res, 401, { error: "wrong recovery code" }); }
       if (!body.username || String(body.username).trim().length < 2) return send(res, 400, { error: "choose a username" });
       if (!body.password || String(body.password).length < 8) return send(res, 400, { error: "password must be at least 8 characters" });
       Store.setAdmin(tokens, body.username, body.password);

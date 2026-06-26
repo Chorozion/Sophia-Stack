@@ -39,6 +39,11 @@ ok((await fetch(base + "/dashboard", { headers: { Cookie: sid }, redirect: "manu
 ok((await post("/_setup", { username: "thomas", password: "pass12345" })).status === 401, "old password no longer works");
 ok((await (await post("/_setup", { username: "thomas2", password: "newpass123" })).json()).ok, "new password works");
 
+// brute-force guard: repeated wrong logins lock the IP (429)
+let locked = false;
+for (let i = 0; i < 9; i++) { if ((await post("/_setup", { username: "thomas2", password: "WRONGpw" })).status === 429) locked = true; }
+ok(locked, "brute-force guard locks the IP after 8 wrong logins (429)");
+
 console.log(`\n  ${pass} passed, ${fail} failed`);
 srv.close(); await new Promise((r) => setTimeout(r, 200)); try { rmSync(dir, { recursive: true, force: true }); } catch {}
 process.exit(fail ? 1 : 0);
