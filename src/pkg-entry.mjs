@@ -7,7 +7,10 @@ import { createServer } from "./server.mjs";
 import { DEFAULT_SITE } from "./default-site.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url)); // resolves to the package dir
-const port = Number(process.env.PORT) || 3000;
+// Passenger (Hostinger) passes PORT as a Unix SOCKET PATH; container hosts pass a
+// numeric port. Honor both: numeric -> TCP port, anything else -> bind that socket.
+const pEnv = process.env.PORT;
+const port = pEnv && /^\d+$/.test(pEnv) ? Number(pEnv) : (pEnv || 3000);
 
 const srv = await createServer({
   dir: join(here, ".sophia-data"),          // edits persist here (survive restart)

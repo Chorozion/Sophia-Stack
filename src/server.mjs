@@ -525,8 +525,9 @@ ${CORE_FOOTER}
   });
 
   return new Promise((resolve) => {
-    const server = app.listen(port, () => {
-      const actual = server.address().port; // honors port:0 (OS-assigned, collision-free)
+    const onListen = () => {
+      const addr = server.address();
+      const actual = addr && typeof addr === "object" ? addr.port : port; // socket -> path
       resolve({
         url: `http://localhost:${actual}/`,
         dashboardUrl: `http://localhost:${actual}/dashboard`,
@@ -534,6 +535,9 @@ ${CORE_FOOTER}
         close: () => { clearInterval(refresh); server.close(); },
         port: actual,
       });
-    });
+    };
+    // Numeric port -> bind all interfaces (proxies may connect on 127.0.0.1).
+    // Non-numeric -> it's a Unix socket path (Passenger); bind it directly.
+    const server = typeof port === "number" ? app.listen(port, "0.0.0.0", onListen) : app.listen(port, onListen);
   });
 }
