@@ -109,8 +109,11 @@ export class Store {
   // else gets in, the true owner uses this code to reset the password and kick
   // everyone out. Self-hosted, so this (or host file access) is the only way back.
   static newRecoveryCode(tokens) {
-    const pick = () => WORDS[crypto.randomInt(WORDS.length)];
-    const code = [pick(), pick(), pick(), pick(), pick()].join(" "); // five random words
+    // Five DISTINCT words, each drawn from the OS CSPRNG -> completely random and
+    // unique per deployed stack (generated at runtime, never baked into the zip).
+    const chosen = new Set();
+    while (chosen.size < 5) chosen.add(WORDS[crypto.randomInt(WORDS.length)]);
+    const code = [...chosen].join(" ");
     const salt = crypto.randomBytes(16).toString("hex");
     tokens.recovery = { salt, hash: crypto.scryptSync(normWords(code), salt, 64).toString("hex") };
     return code; // plaintext shown once; only the hash is stored
