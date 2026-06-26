@@ -1,0 +1,30 @@
+{
+  "name": "@sophiaxt/sophia-stack",
+  "version": "0.0.2",
+  "private": true,
+  "description": "AI-optimized full-stack deployment stack — build, connect, edit, and ship sites at minimal token cost with real-time edits and safe deploys.",
+  "type": "module",
+  "bin": {
+    "sophia": "./bin/sophia.mjs"
+  },
+  "scripts": {
+    "demo": "node demo/demo.mjs",
+    "build": "node scripts/build.mjs",
+    "catalog": "node scripts/catalog.mjs",
+    "dev": "node scripts/dev.mjs",
+    "serve": "node scripts/serve.mjs",
+    "package": "node scripts/package.mjs",
+    "test": "node demo/react-test.mjs && node demo/connections-test.mjs && node demo/server-test.mjs"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.23.0"
+  },
+  "keywords": ["ai", "token-efficient", "site-model", "real-time", "deploy", "sophiaxt"],
+  "author": "SOPHIA XT (sophia-2)",
+  "license": "UNLICENSED",
+  "engines": { "node": ">=18" }
+}
