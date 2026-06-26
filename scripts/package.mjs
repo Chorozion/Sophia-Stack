@@ -38,28 +38,74 @@ writeFileSync(join(out, "package.json"), JSON.stringify({
 writeFileSync(join(out, "startup.mjs"), 'import "./app.js";\n');
 writeFileSync(join(out, "server.js"), 'import "./app.js";\n');
 
-writeFileSync(join(out, "README.txt"), `SOPHIA STACK — self-hosted site
+writeFileSync(join(out, "README.txt"), `SOPHIA STACK — your self-hosted, AI-built website
 
 WHAT THIS IS
-  A self-contained website you own. An AI agent builds it live via a token API.
-  No SSH redeploys, no staging. Edits persist in ./.sophia-data (keep it across updates).
+  A website you own. After a one-time setup, you hand any AI (ChatGPT, Claude, Grok)
+  a key + your URL and it builds the site live — no SSH, no redeploys. Your edits
+  persist in ./.sophia-data (keep that folder across updates). Zero npm install.
 
-DEPLOY (any Node cloud host — Hostinger, Railway, Render, a VPS, etc.)
-  1. Upload this folder (or its zip) to your host.
-  2. Set the Node app's start file to "app.js" (or startup.mjs) and Node >= 18.
-  3. Start it. Point your domain at it.
-  4. Visit  https://yourdomain/_setup  — set an owner password.
-  5. Copy the agent token it shows you.
+DEPLOY ON HOSTINGER (Setup Node.js App)
+  1. Upload this folder (or its .zip) into your domain's directory in hPanel File
+     Manager, and Extract it there.
+  2. hPanel -> Advanced -> Setup Node.js App:
+       - Application root: the folder you extracted (the one containing app.js)
+       - Application startup file: app.js
+       - Node version: 18 or higher
+     Create, then Start/Restart.
+  3. Open https://yourdomain/ in a browser.
+  (Same idea on Railway/Render/a VPS: start file = app.js, Node >= 18.)
 
-PUT YOUR AI TO WORK
-  Hand your agent one line:
-    "Connect to https://yourdomain/ with token <agent-token> and build my site."
-  It reads /api/sophia/catalog, then edits live via /api/sophia/patch and /api/sophia/css.
-  Watch it build in real time at  https://yourdomain/   — open the editor at /_edit.
+FIRST RUN
+  1. On your site, click "Get started".
+  2. Create your admin username + password (stored automatically).
+     -> SAVE the five-word recovery string shown ONCE. It is your only way back in
+        if you lose the password or someone else gets it.
+  3. You land in your Dashboard. On the "Connect" tab, "Mint a new key" (mykey-...).
+
+PUT YOUR AI TO WORK (no CLI — just a chat)
+  In ChatGPT / Claude / Grok, paste:
+    "Read https://yourdomain/skill.md, then build my website using key mykey-XXXX."
+  The AI reads the skill, connects with the key, and builds — pages, design, data,
+  photos/video, even sandboxed backend logic. Watch it live at https://yourdomain/.
+
+YOUR DASHBOARD (https://yourdomain/dashboard)
+  Pages - Data - Media (upload photos/files/video) - Keys (revoke anytime) -
+  Settings (site description + optional "Sign in with Google" with your own OAuth app).
 
 SAFE BY DEFAULT
   Every edit is validated before it lands; bad edits are rejected. Version history +
-  one-call rollback (/api/sophia/rollback). The core structure cannot be edited away.
+  one-call rollback. The footer (Admin + "Powered by Sophia Stack") and the core
+  cannot be edited away. SECURITY.txt explains exactly what the AI can and cannot do.
+`);
+
+// What the safety environment CAN and CANNOT do — ships with the artifact.
+writeFileSync(join(out, "SECURITY.txt"), `SOPHIA STACK — what the AI can and cannot do (v1)
+
+THE AI CAN
+  - Add/edit/delete pages; write custom HTML / CSS / JS for the front end.
+  - Define data collections + CRUD (real forms, lists, dynamic content).
+  - Upload + use media (photos, files, video).
+  - Write sandboxed backend functions (server logic at /api/fn/<name>).
+  - Use built-in blocks, style presets, and effects; roll changes back.
+
+THE AI CANNOT
+  - Touch or break the framework core, or remove the footer / "Powered by Sophia Stack".
+  - Read your password, recovery string, tokens, or any secret.
+  - Reach the host OS, filesystem, network, or other sites — backend code runs in a
+    locked-down sandbox (no require/process/fs/network, with a timeout).
+  - Run arbitrary server code outside that sandbox.
+
+YOUR SAFETY ENV
+  - Runs in YOUR own contained instance (your host, your data dir).
+  - Every edit validated before it lands; bad edits rejected; one-click rollback.
+  - Token-gated writes; revoke any key instantly from the dashboard.
+  - Recovery: a five-word string (shown once) resets your login AND revokes every
+    key + session, locking out anyone who got in. Lose both password and string?
+    Delete the "auth" block in .sophia-data/tokens.json on your host and re-run setup.
+
+  NOTE: custom front-end JS the AI writes runs in your visitors' browsers (it's your
+  site, your call). Keep your key private — anyone with it can edit your site.
 `);
 
 console.log("packaged -> " + out);

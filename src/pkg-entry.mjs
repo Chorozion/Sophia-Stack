@@ -20,5 +20,5 @@ const srv = await createServer({
 });
 
 console.log(`Sophia stack running on ${srv.url}`);
-console.log(`First-run setup (set a password, get your agent token): ${srv.url}_setup`);
-console.log(`Live editor: ${srv.editUrl}`);
+console.log(`Get started (create your admin account): ${srv.url}_setup`);
+console.log(`Your dashboard (mint a key, manage the site): ${srv.url}dashboard`);

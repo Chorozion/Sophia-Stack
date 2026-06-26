@@ -13,7 +13,6 @@ import { applyPatch } from "./patch.mjs";
 import { pageHead } from "./styles.mjs";
 import { resolveConnections } from "./connections.mjs";
 import { Store } from "./store.mjs";
-import { EDIT_PANEL } from "./edit-panel.mjs";
 import { validateModel, sanitizeCss } from "./validate.mjs";
 import { DataStore, sanitizeRecord } from "./data-store.mjs";
 import { renderSkill } from "./skill-text.mjs";
@@ -238,7 +237,6 @@ ${CORE_FOOTER}
       res.writeHead(200, { "Content-Type": "text/plain" });
       return res.end(`# ${model.site || "Site"}\n\n> Built with Sophia Stack.\n\n## Pages\n${pages}\n`);
     }
-    if (m === "GET" && p === "/_edit") { res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" }); return res.end(EDIT_PANEL); }
     if (m === "GET" && p === "/live") {
       res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" });
       res.write("event: hello\ndata: {}\n\n"); clients.add(res);
@@ -520,7 +518,7 @@ ${CORE_FOOTER}
     const actual = server.address().port; // honors port:0 (OS-assigned, collision-free)
     resolve({
       url: `http://localhost:${actual}/`,
-      editUrl: `http://localhost:${actual}/_edit`,
+      dashboardUrl: `http://localhost:${actual}/dashboard`,
       getModel: () => model, getCss: () => css, getTokens: () => tokens,
       close: () => { clearInterval(refresh); server.close(); },
       port: actual,
