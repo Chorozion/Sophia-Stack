@@ -5,20 +5,17 @@ node_modules/
 dist/
 public/
 catalog.json
-
 # packaged output + zips
 package/
 *.zip
-
 # runtime state (per-deploy; never commit)
 .sophia-data/
 **/.sophia-data/
-
 # test scratch
 demo/out/
-
 # misc
 *.log
 .DS_Store
 dist-zip/
 !release/
+!release/*.zip
