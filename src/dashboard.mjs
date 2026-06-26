@@ -166,7 +166,8 @@ a{color:#00D4FF}.hide{display:none}code{color:#FF6B35}</style></head>
     });
   }
   function settings(P){
-    P.innerHTML='<div class="card"><h2>AI key &mdash; let Sophia build for you</h2><p>Paste an AI API key and Sophia builds your site from the chat box on the Build tab (no copy-paste). Works with OpenAI or any OpenAI-compatible provider (DeepSeek, Groq, OpenRouter, a local model).</p>'
+    P.innerHTML='<div class="card"><h2>AI key &mdash; let Sophia build for you</h2><p>Pick a provider, tap <b>Get a key</b>, sign up, copy the key, paste it below. Tap <b>Use</b> to auto-fill the model + URL. Then chat on the Build tab.</p>'
+      +'<div class="label">Providers (free signups)</div><div id="provs"></div>'
       +'<div class="label">API key</div><input id="lk" placeholder="(leave blank to keep current)"><div class="label">Model</div><input id="lm" placeholder="gpt-4o-mini"><div class="label">API base URL (advanced)</div><input id="lb" placeholder="https://api.openai.com/v1">'
       +'<div class="row"><button id="sl">Save</button> <span class="ok" id="lok"></span></div></div>'
       +'<div class="card"><h2>Describe your site</h2><p>Your AI reads this to know what to build.</p><textarea id="brief"></textarea><div class="row"><button id="sb">Save</button> <span class="ok" id="bok"></span></div></div>'
@@ -180,6 +181,16 @@ a{color:#00D4FF}.hide{display:none}code{color:#FF6B35}</style></head>
     $('so').onclick=function(){var b={enabled:$('oe').checked,provider:'google',clientId:$('ocid').value,allowedEmail:$('oem').value};if($('ocs').value)b.clientSecret=$('ocs').value;api('PUT','/api/sophia/oauth',b).then(function(){$('ook').textContent='saved ✓';setTimeout(function(){$('ook').textContent=''},2000)})};
     api('GET','/api/sophia/llm').then(function(j){$('lm').value=j.model||'';$('lb').value=j.baseURL||'';if(j.configured)$('lk').placeholder='(saved — leave blank to keep)'});
     $('sl').onclick=function(){var b={model:$('lm').value,baseURL:$('lb').value};if($('lk').value)b.apiKey=$('lk').value;api('PUT','/api/sophia/llm',b).then(function(){$('lok').textContent='saved ✓';$('lk').value='';setTimeout(function(){$('lok').textContent=''},2000)})};
+    var PROVIDERS=[
+      ['OpenAI','https://platform.openai.com/api-keys','https://api.openai.com/v1','gpt-4o-mini','popular'],
+      ['DeepSeek','https://platform.deepseek.com/api_keys','https://api.deepseek.com','deepseek-chat','cheapest'],
+      ['Groq','https://console.groq.com/keys','https://api.groq.com/openai/v1','llama-3.3-70b-versatile','fast, free tier'],
+      ['OpenRouter','https://openrouter.ai/keys','https://openrouter.ai/api/v1','openai/gpt-4o-mini','many models'],
+      ['Together','https://api.together.xyz/settings/api-keys','https://api.together.xyz/v1','meta-llama/Llama-3.3-70B-Instruct-Turbo',''],
+      ['Mistral','https://console.mistral.ai/api-keys','https://api.mistral.ai/v1','mistral-large-latest','']
+    ];
+    $('provs').innerHTML=PROVIDERS.map(function(p,i){return '<div class="item"><span><b>'+p[0]+'</b>'+(p[4]?' <span style="color:#7d93a8;font-size:12px">'+p[4]+'</span>':'')+'</span><span class="row"><a href="'+p[1]+'" target="_blank" rel="noopener">Get a key &#8599;</a> <button class="ghost" data-use="'+i+'">Use</button></span></div>'}).join('');
+    Array.prototype.forEach.call(document.querySelectorAll('[data-use]'),function(b){b.onclick=function(){var p=PROVIDERS[+b.getAttribute('data-use')];$('lb').value=p[2];$('lm').value=p[3];$('lk').focus()}});
   }
   $('logout').onclick=function(){fetch('/_logout',{method:'POST'}).then(function(){location.href='/_setup'})};
   renderTabs();render();
