@@ -31,6 +31,16 @@ function setPath(obj, path, value) {
   cur[parts[parts.length - 1]] = value;
 }
 
+function delPath(obj, path) {
+  const parts = path.split(".");
+  let cur = obj;
+  for (let i = 0; i < parts.length - 1; i++) {
+    if (cur[parts[i]] == null || typeof cur[parts[i]] !== "object") return;
+    cur = cur[parts[i]];
+  }
+  delete cur[parts[parts.length - 1]];
+}
+
 export function applyPatch(model, ops) {
   const next = structuredClone(model);
   const changed = new Set();
@@ -68,6 +78,20 @@ export function applyPatch(model, ops) {
         const [b] = hit.blocks.splice(hit.index, 1);
         hit.blocks.splice(op.index, 0, b);
         changed.add(op.id);
+        break;
+      }
+      // Model-level edits (App Model state outside the block tree): data
+      // collections, style, page titles, etc. Dot path from the model root.
+      case "mset": {
+        if (!op.path) throw new Error("mset: path required");
+        setPath(next, op.path, op.value);
+        changed.add("model:" + op.path);
+        break;
+      }
+      case "mdel": {
+        if (!op.path) throw new Error("mdel: path required");
+        delPath(next, op.path);
+        changed.add("model:" + op.path);
         break;
       }
       default:

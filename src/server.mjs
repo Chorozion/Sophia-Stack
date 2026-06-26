@@ -15,6 +15,7 @@ import { resolveConnections } from "./connections.mjs";
 import { Store } from "./store.mjs";
 import { EDIT_PANEL } from "./edit-panel.mjs";
 import { validateModel, sanitizeCss } from "./validate.mjs";
+import { DataStore, sanitizeRecord } from "./data-store.mjs";
 
 const DEFAULT_CLIENT_JS = fileURLToPath(new URL("../public/client.js", import.meta.url));
 const DEFAULT_CATALOG = fileURLToPath(new URL("../catalog.json", import.meta.url));
@@ -75,6 +76,7 @@ export async function createServer(opts = {}) {
   const clientJs = opts.clientJs || DEFAULT_CLIENT_JS;
   const catalogPath = opts.catalogPath || DEFAULT_CATALOG;
   const store = new Store(dir);
+  const dataStore = new DataStore(dir);   // the app's contained backend (collections)
   const loaded = store.load(seedModel);
   let model = loaded.model;
   let css = loaded.css;
@@ -132,14 +134,18 @@ export async function createServer(opts = {}) {
     return { ok: true, restored: true, remaining: store.history().length };
   }
 
-  const shell = () => {
-    const title = model?.pages?.[route]?.title || model.site || "Sophia";
-    const head = pageHead(model, route, css);
-    const boot = JSON.stringify({ model, route, data }).replace(/</g, "\\u003c");
+  const shell = (routePath = route) => {
+    const title = model?.pages?.[routePath]?.title || model.site || "Sophia";
+    const head = pageHead(model, routePath, css);
+    const boot = JSON.stringify({ model, route: routePath, data }).replace(/</g, "\\u003c");
     return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title>${head}</head>
-<body><div id="root">${ssr(model, route, data)}</div>
+<body><div id="root">${ssr(model, routePath, data)}</div>
 <script>window.__SOPHIA__=${boot}</script><script src="/client.js"></script></body></html>`;
   };
+
+  const host = (req) => (req.headers["x-forwarded-host"] || req.headers.host || "localhost");
+  const proto = (req) => (req.headers["x-forwarded-proto"] || "https");
+  const origin = (req) => `${proto(req)}://${host(req)}`;
 
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, "http://localhost");
@@ -147,8 +153,26 @@ export async function createServer(opts = {}) {
     const m = req.method;
 
     // ── site + live preview ──────────────────────────────────────────────
-    if (m === "GET" && p === "/") { res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" }); return res.end(shell()); }
+    if (m === "GET" && p === "/") { res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" }); return res.end(shell("/")); }
     if (m === "GET" && p === "/client.js") { res.writeHead(200, { "Content-Type": "text/javascript; charset=utf-8" }); return res.end(readFileSync(clientJs)); }
+
+    // ── auto-generated production files (SEO + AI discovery) ──
+    if (m === "GET" && p === "/sitemap.xml") {
+      const o = origin(req);
+      const urls = Object.keys(model.pages || {}).map((r) => `  <url><loc>${o}${r === "/" ? "/" : r}</loc></url>`).join("\n");
+      res.writeHead(200, { "Content-Type": "application/xml" });
+      return res.end(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`);
+    }
+    if (m === "GET" && p === "/robots.txt") {
+      res.writeHead(200, { "Content-Type": "text/plain" });
+      return res.end(`User-agent: *\nAllow: /\nSitemap: ${origin(req)}/sitemap.xml\n`);
+    }
+    if (m === "GET" && p === "/llms.txt") {
+      const o = origin(req);
+      const pages = Object.entries(model.pages || {}).map(([r, pg]) => `- [${pg.title || r}](${o}${r})`).join("\n");
+      res.writeHead(200, { "Content-Type": "text/plain" });
+      return res.end(`# ${model.site || "Site"}\n\n> Built with Sophia Stack.\n\n## Pages\n${pages}\n`);
+    }
     if (m === "GET" && p === "/_edit") { res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" }); return res.end(EDIT_PANEL); }
     if (m === "GET" && p === "/live") {
       res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" });
@@ -192,6 +216,47 @@ export async function createServer(opts = {}) {
         } catch (e) { return tc(String(e.message || e), true); }
       }
       return send(res, 200, { jsonrpc: "2.0", id, error: { code: -32601, message: "method not found: " + method } });
+    }
+
+    // ── App backend: CRUD over agent-defined collections ──
+    // /api/data/:collection[/:id]. Access policy comes from the App Model:
+    // model.data.collections[col].access = { create: "public"|"token", read: "public"|"token" }.
+    // Only declared collections are reachable. Update/delete always require a token.
+    if (p.startsWith("/api/data/")) {
+      const parts = p.slice("/api/data/".length).split("/").filter(Boolean);
+      const col = parts[0], itemId = parts[1];
+      const def = model.data?.collections?.[col];
+      if (!def) return send(res, 404, { error: "unknown collection" });
+      const acc = def.access || {};
+      const tokenOk = !!auth(req);
+      const can = (action, fallback = "token") => {
+        const pol = acc[action] || fallback;
+        return pol === "public" || (pol === "token" && tokenOk);
+      };
+      if (m === "GET" && !itemId) {
+        if (!can("read")) return send(res, 401, { error: "read denied" });
+        return send(res, 200, { items: dataStore.list(col, { sort: "newest", limit: 200 }) });
+      }
+      if (m === "GET" && itemId) {
+        if (!can("read")) return send(res, 401, { error: "read denied" });
+        const r = dataStore.get(col, itemId); return r ? send(res, 200, r) : send(res, 404, { error: "not found" });
+      }
+      if (m === "POST" && !itemId) {
+        if (!can("create")) return send(res, 401, { error: "create denied" });
+        const body = JSON.parse((await readBody(req)) || "{}");
+        return send(res, 200, { ok: true, item: dataStore.create(col, sanitizeRecord(body, def)) });
+      }
+      if (m === "PUT" && itemId) {
+        if (!tokenOk) return send(res, 401, { error: "token required" });
+        const body = JSON.parse((await readBody(req)) || "{}");
+        const r = dataStore.update(col, itemId, sanitizeRecord(body, def));
+        return r ? send(res, 200, { ok: true, item: r }) : send(res, 404, { error: "not found" });
+      }
+      if (m === "DELETE" && itemId) {
+        if (!tokenOk) return send(res, 401, { error: "token required" });
+        return send(res, 200, { ok: true, removed: dataStore.remove(col, itemId) });
+      }
+      return send(res, 405, { error: "method not allowed" });
     }
 
     // ── first-run setup: claim ownership with a password, get your agent token ──
@@ -257,6 +322,12 @@ export async function createServer(opts = {}) {
         store.saveTokens(tokens);
         return send(res, 200, { ok: true, removed: before - tokens.tokens.length });
       }
+    }
+
+    // ── multi-page: serve any route the agent has added to model.pages ──
+    if (m === "GET" && model.pages && model.pages[p]) {
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      return res.end(shell(p));
     }
 
     res.writeHead(404); res.end("not found");

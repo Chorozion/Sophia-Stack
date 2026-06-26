@@ -143,8 +143,26 @@ export function Quote({ text, author }) {
   );
 }
 
+// Fully-custom block: raw HTML + CSS + JS the agent authors. This is the escape
+// hatch to "build anything" — custom markup, custom styles, custom client logic.
+// It runs in the owner's OWN self-hosted site (their risk, per SECURITY.md); the
+// framework core stays immutable regardless.
+export function Html({ html = "", css, js }) {
+  React.useEffect(() => {
+    if (!js) return;
+    try { new Function(js)(); } catch (e) { console.error("[sophia] custom js error:", e); }
+  }, [js]);
+  return (
+    <section className="sx-html">
+      {css ? <style dangerouslySetInnerHTML={{ __html: css }} /> : null}
+      <div dangerouslySetInnerHTML={{ __html: html }} />
+    </section>
+  );
+}
+
 export const BLOCKS = {
   nav: Nav, hero: Hero, features: Features, cta: Cta, footer: Footer, feed: Feed,
   stats: Stats, logos: Logos, steps: Steps, pricing: Pricing, quote: Quote,
+  html: Html,
 };
 export const BLOCK_TYPES = Object.keys(BLOCKS);

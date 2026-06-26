@@ -6,12 +6,28 @@
 const KNOWN_TYPES = new Set([
   "nav", "hero", "features", "cta", "footer", "feed",
   "stats", "logos", "steps", "pricing", "quote",
+  "form", "list", "html",
 ]);
 
 export function validateModel(model) {
   const errors = [];
   if (!model || typeof model !== "object") return { ok: false, errors: ["model is not an object"] };
   if (!model.pages || typeof model.pages !== "object") errors.push("model.pages missing");
+  // App Model data layer (optional): collections with fields + access policy.
+  if (model.data !== undefined) {
+    if (typeof model.data !== "object" || model.data === null) errors.push("model.data must be an object");
+    else {
+      const cols = model.data.collections;
+      if (cols !== undefined) {
+        if (typeof cols !== "object" || cols === null) errors.push("model.data.collections must be an object");
+        else for (const [name, def] of Object.entries(cols)) {
+          if (!/^[a-z0-9_-]+$/i.test(name)) errors.push(`collection name invalid: ${name}`);
+          if (def && def.fields && !Array.isArray(def.fields)) errors.push(`collection ${name}: fields must be an array`);
+          if (def && def.access && typeof def.access !== "object") errors.push(`collection ${name}: access must be an object`);
+        }
+      }
+    }
+  }
   for (const [route, page] of Object.entries(model.pages || {})) {
     if (!page || !Array.isArray(page.blocks)) { errors.push(`page ${route}: blocks must be an array`); continue; }
     const ids = new Set();
