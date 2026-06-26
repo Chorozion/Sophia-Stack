@@ -19,27 +19,32 @@ mkdirSync(join(out, "public"), { recursive: true });
 await build({
   entryPoints: [join(root, "src/pkg-entry.mjs")],
   outfile: join(out, "app.js"),
-  bundle: true, platform: "node", format: "esm", jsx: "automatic",
+  // CommonJS output: the most compatible format for shared/Passenger Node hosts
+  // (Hostinger). `require` is native here, so no createRequire shim is needed and
+  // react-dom/server's require("stream") resolves directly.
+  bundle: true, platform: "node", format: "cjs", jsx: "automatic",
   minify: true,
-  // react-dom/server is CJS and does require("stream"); give the ESM bundle a
-  // real require so Node builtins resolve (avoids "Dynamic require not supported").
-  banner: { js: "import{createRequire as __cr}from'node:module';const require=__cr(import.meta.url);" },
+  // CJS has no import.meta.url; map it to this file's real URL via __filename so
+  // module-level `new URL("../x", import.meta.url)` defaults resolve (don't crash).
+  banner: { js: "const __sophiaMetaUrl=require('url').pathToFileURL(__filename).href;" },
+  define: { "import.meta.url": "__sophiaMetaUrl" },
 });
 
 copyFileSync(join(root, "public/client.js"), join(out, "public/client.js"));
 copyFileSync(join(root, "catalog.json"), join(out, "catalog.json"));
 
 writeFileSync(join(out, "package.json"), JSON.stringify({
-  name: "sophia-site", private: true, type: "module", main: "app.js",
+  // No "type":"module" -> app.js is CommonJS, the format Passenger loads reliably.
+  name: "sophia-site", private: true, main: "app.js",
   scripts: { start: "node app.js" }, engines: { node: ">=18" },
   // Express is bundled into app.js (the app runs with no install); it's declared
   // here so framework-detecting hosts (Hostinger, etc.) recognize + accept it.
   dependencies: { express: "^5.2.1" },
 }, null, 2) + "\n");
 
-// Passenger / cPanel / Hostinger Node apps look for these entry names.
-writeFileSync(join(out, "startup.mjs"), 'import "./app.js";\n');
-writeFileSync(join(out, "server.js"), 'import "./app.js";\n');
+// Passenger / cPanel / Hostinger Node apps look for these entry names (CJS).
+writeFileSync(join(out, "startup.js"), 'require("./app.js");\n');
+writeFileSync(join(out, "server.js"), 'require("./app.js");\n');
 
 writeFileSync(join(out, "README.txt"), `SOPHIA STACK — your self-hosted, AI-built website
 
