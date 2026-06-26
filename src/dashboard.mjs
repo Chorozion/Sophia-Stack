@@ -32,12 +32,32 @@ a{color:#00D4FF}.hide{display:none}code{color:#FF6B35}</style></head>
   function renderTabs(){$('tabs').innerHTML=TABS.map(function(t){return '<div class="tab '+(t===cur?'on':'')+'" data-t="'+t+'">'+t+'</div>'}).join('');Array.prototype.forEach.call(document.querySelectorAll('.tab'),function(el){el.onclick=function(){cur=el.getAttribute('data-t');renderTabs();render()}})}
   function render(){var P=$('panel');P.innerHTML='';if(cur==='Connect')connect(P);else if(cur==='Pages')pages(P);else if(cur==='Data')data(P);else if(cur==='Media')media(P);else if(cur==='Keys')keys(P);else settings(P)}
 
+  function starterText(key){
+    return 'You can build and edit my live website through its API. Do what I ask by calling it.\n\n'
+      +'1) Read the instructions: '+origin+'skill.md\n'
+      +'2) Read what is allowed: GET '+origin+'api/sophia/catalog\n'
+      +'3) Read the current site: GET '+origin+'api/sophia/model\n'
+      +'4) Make changes (send header  Authorization: Bearer '+key+'  on every write):\n'
+      +'   - POST '+origin+'api/sophia/patch     edit pages/blocks/style/data/functions\n'
+      +'   - PUT  '+origin+'api/sophia/css       custom CSS\n'
+      +'   - POST '+origin+'api/sophia/rollback  undo the last change\n\n'
+      +'KEY = '+key+'\n\n'
+      +'Start: read the skill + catalog, then tell me what you can do — and make this first change: set the style to "dark-tech" and rewrite the homepage hero.';
+  }
   function connect(P){
-    P.innerHTML='<div class="card"><h2>Connect your AI</h2><p>Mint a key, then give your AI the key + your URL. It reads the skill and builds.</p><button id="mint">Mint a new key</button><div id="ko" class="hide"><div class="label">Your key <span class="copy" id="cpk">copy</span></div><div class="field" id="key"></div><div class="label">Your site URL</div><div class="field">'+esc(origin)+'</div><div class="label">Skill</div><div class="field"><a href="'+origin+'skill.md" target="_blank">'+origin+'skill.md</a></div><div class="field" id="say" style="margin-top:10px;border-style:dashed;border-color:#FF6B35"></div></div></div>'
-      +'<div class="card"><h2>Use it inside the ChatGPT app (Custom GPT)</h2><p>So ChatGPT can actually edit (not just read), make a Custom GPT once:</p><ol style="color:#9fc7d6;font-size:13px;line-height:1.7;margin:0 0 8px;padding-left:18px"><li>ChatGPT → <b>Explore GPTs → Create</b> → Configure → <b>Create new Action</b>.</li><li><b>Import from URL:</b> <span class="copy" id="cpo">copy</span></li><li>Auth → <b>API Key → Bearer</b> → paste your <b>mykey-</b> key.</li><li>Save. Now tell it: <i>"Change the style to dark-tech and rewrite the homepage hero."</i></li></ol><div class="field"><a href="'+origin+'openapi.json" target="_blank">'+origin+'openapi.json</a></div></div>'
+    P.innerHTML='<div class="card"><h2>Connect any AI</h2><p>Mint a key, then copy the one block below into ChatGPT, Claude, Grok, Kimi, DeepSeek — any AI that can browse/call APIs.</p><button id="mint">Mint a key + starter</button>'
+      +'<div id="ko" class="hide"><div class="label">① One thing to copy — paste into any AI chat <span class="copy" id="cps">copy</span></div><textarea id="starter" readonly style="min-height:200px;font-family:ui-monospace,monospace;font-size:12px"></textarea>'
+      +'<div class="label">② Just the key — for a Custom GPT / tool auth field <span class="copy" id="cpk">copy</span></div><div class="field" id="key"></div></div></div>'
+      +'<div class="card"><h2>Per-platform (optional, for native tools)</h2>'
+      +'<p style="margin-bottom:8px"><b>ChatGPT</b> (Custom GPT Action): Explore GPTs → Create → Action → Import from URL <span class="copy" id="cpo">copy</span>, Auth = API Key / Bearer + your key.</p>'
+      +'<div class="field" style="margin-bottom:12px"><a href="'+origin+'openapi.json" target="_blank">'+origin+'openapi.json</a></div>'
+      +'<p style="margin-bottom:8px"><b>Claude / MCP apps</b>: add an MCP server <span class="copy" id="cpm">copy</span> with a Bearer header = your key.</p>'
+      +'<div class="field" style="margin-bottom:12px">'+origin+'mcp</div>'
+      +'<p><b>Grok / Kimi / DeepSeek / others</b>: paste the starter block above. If the app has a "custom tool / function" feature, point it at the same REST endpoints + Bearer key.</p></div>'
       +'<div class="card"><h2>Your live site</h2><div class="row"><a href="/" target="_blank">Open site →</a></div></div>';
     $('cpo').onclick=function(){navigator.clipboard.writeText(origin+'openapi.json')};
-    $('mint').onclick=function(){api('POST','/api/sophia/tokens',{label:'agent'}).then(function(j){if(!j.token)return;$('key').textContent=j.token;$('say').textContent='Tell your AI: "Read '+origin+'skill.md, then build my website using key '+j.token+'."';$('cpk').onclick=function(){navigator.clipboard.writeText(j.token)};$('ko').classList.remove('hide')})};
+    $('cpm').onclick=function(){navigator.clipboard.writeText(origin+'mcp')};
+    $('mint').onclick=function(){api('POST','/api/sophia/tokens',{label:'agent'}).then(function(j){if(!j.token)return;$('key').textContent=j.token;$('starter').value=starterText(j.token);$('cps').onclick=function(){navigator.clipboard.writeText($('starter').value)};$('cpk').onclick=function(){navigator.clipboard.writeText(j.token)};$('ko').classList.remove('hide')})};
   }
   function pages(P){
     api('GET','/api/sophia/model').then(function(m){var ps=m.pages||{};
