@@ -18,7 +18,15 @@ const S = (m, p, b) => fetch(base + p, { method: m, headers: { Cookie: sid, ...(
 // Dashboard shell
 const dash = await fetch(base + "/dashboard", { headers: { Cookie: sid } });
 const dh = await dash.text();
-ok(dash.status === 200 && dh.includes("Sophia · Dashboard") && dh.includes("Pages") && dh.includes("Media") && dh.includes("Keys"), "dashboard loads with all tabs");
+ok(dash.status === 200 && dh.includes("Sophia · Dashboard") && dh.includes("Pages") && dh.includes("Media") && dh.includes("Keys") && dh.includes("Build your site with any AI"), "dashboard loads with Build + all tabs");
+
+// Build flow: the AI returns a patch (markdown-fenced, with prose) -> stack applies it
+const aiReply = "Sure! Here is the change:\n```json\n{ \"ops\": [ { \"op\": \"set\", \"id\": \"hero\", \"path\": \"headline\", \"value\": \"Bean There Coffee\" } ] }\n```\nLet me know if you want more.";
+const fenced = aiReply.match(/```(?:json)?\s*([\s\S]*?)```/);
+const parsed = JSON.parse(fenced[1]);
+const applied = await S("POST", "/api/sophia/patch", parsed);
+ok(applied.body.ok, "Build: a fenced AI reply parses + applies as a patch");
+ok((await S("GET", "/api/sophia/model")).body.pages["/"].blocks.find((b) => b.id === "hero").headline === "Bean There Coffee", "Build: the applied edit is live in the model");
 
 // Pages
 ok((await S("POST", "/api/sophia/patch", { ops: [{ op: "mset", path: "pages./about", value: { title: "About", blocks: [{ id: "h1", type: "hero", headline: "About" }] } }] })).body.ok, "owner session adds a page");

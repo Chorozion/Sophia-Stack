@@ -28,9 +28,77 @@ a{color:#00D4FF}.hide{display:none}code{color:#FF6B35}</style></head>
   var origin=location.origin+'/';
   var api=function(m,p,b){var o={method:m,headers:{}};if(b!==undefined){o.headers['Content-Type']='application/json';o.body=JSON.stringify(b)}return fetch(p,o).then(function(r){return r.json().catch(function(){return{}})})};
   var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
-  var TABS=['Connect','Pages','Data','Media','Keys','Settings'];var cur='Connect';
+  var TABS=['Build','Connect','Pages','Data','Media','Keys','Settings'];var cur='Build';
   function renderTabs(){$('tabs').innerHTML=TABS.map(function(t){return '<div class="tab '+(t===cur?'on':'')+'" data-t="'+t+'">'+t+'</div>'}).join('');Array.prototype.forEach.call(document.querySelectorAll('.tab'),function(el){el.onclick=function(){cur=el.getAttribute('data-t');renderTabs();render()}})}
-  function render(){var P=$('panel');P.innerHTML='';if(cur==='Connect')connect(P);else if(cur==='Pages')pages(P);else if(cur==='Data')data(P);else if(cur==='Media')media(P);else if(cur==='Keys')keys(P);else settings(P)}
+  function render(){var P=$('panel');P.innerHTML='';if(cur==='Build')build(P);else if(cur==='Connect')connect(P);else if(cur==='Pages')pages(P);else if(cur==='Data')data(P);else if(cur==='Media')media(P);else if(cur==='Keys')keys(P);else settings(P)}
+
+  // BUILD: describe -> copy prompt -> paste into ANY ai -> paste reply back -> apply.
+  // The stack does the editing; the AI only writes the change. No setup, any LLM.
+  function extractPatch(text){
+    if(!text)return null;
+    var t=String(text).trim();
+    var f=String.fromCharCode(96,96,96); // triple backtick (code fence)
+    var i=t.indexOf(f);
+    if(i>=0){var j=t.indexOf(f,i+3);if(j>i){t=t.slice(i+3,j).replace(/^json/i,'').trim();}}
+    try{return JSON.parse(t)}catch(e){}
+    var s=t.indexOf('{'),e=t.lastIndexOf('}');
+    if(s>=0&&e>s){try{return JSON.parse(t.slice(s,e+1))}catch(e2){}}
+    var sa=t.indexOf('['),ea=t.lastIndexOf(']');
+    if(sa>=0&&ea>sa){try{return JSON.parse(t.slice(sa,ea+1))}catch(e3){}}
+    return null;
+  }
+  function build(P){
+    P.innerHTML=
+      '<div class="card"><h2>Build your site with any AI</h2>'
+      +'<p>No setup, no Custom GPT. Works with ChatGPT, Claude, Grok, Kimi, DeepSeek (free accounts too). You copy a prompt out, paste the reply back — that is the whole thing.</p>'
+      +'<ol style="color:#9fc7d6;font-size:13px;line-height:1.9;padding-left:18px;margin:0">'
+      +'<li>Type what you want in box 1.</li>'
+      +'<li>Press <b>Copy the prompt</b>.</li>'
+      +'<li>Open ChatGPT (or any AI), paste, send.</li>'
+      +'<li>Copy the entire reply the AI gives you.</li>'
+      +'<li>Paste it into box 2 and press <b>Apply to my site</b>.</li>'
+      +'<li>Press <b>Open site</b> to see the change.</li></ol></div>'
+      +'<div class="card"><h2>1 &middot; What do you want?</h2>'
+      +'<textarea id="want" placeholder="e.g. Make this a landing page for my coffee shop: a hero with the name Bean There, a short about section, opening hours, and a contact form. Use warm colors."></textarea>'
+      +'<div class="row"><button id="genp">Copy the prompt</button> <span class="ok" id="gok"></span></div></div>'
+      +'<div class="card"><h2>2 &middot; Paste the reply from the AI</h2>'
+      +'<textarea id="reply" placeholder="Paste everything the AI replied here."></textarea>'
+      +'<div class="row"><button id="applyb">Apply to my site</button> <a href="/" target="_blank" style="margin-left:6px">Open site &rarr;</a> <span id="ares" style="font-size:13px"></span></div></div>';
+    var cat=null,mdl=null;
+    Promise.all([api('GET','/api/sophia/catalog'),api('GET','/api/sophia/model')]).then(function(r){cat=r[0];mdl=r[1]});
+    $('genp').onclick=function(){
+      if(!cat||!mdl){$('gok').textContent='loading, try again in a second';return}
+      var blocks=Object.keys(cat.blocks||{}).join(', ');
+      var styles=Object.keys(cat.styles||{}).join(', ');
+      var nl=String.fromCharCode(10);
+      var p='You are editing a live website by writing a JSON patch. Reply with ONLY a JSON object and nothing else (no explanation, no markdown).'+nl+nl
+        +'PATCH FORMAT: { "ops": [ ... ] }'+nl
+        +'Operations:'+nl
+        +'- {"op":"set","id":"<blockId>","path":"<prop>","value":<any>}   change a block prop'+nl
+        +'- {"op":"add","value":{"id":"<newUniqueId>","type":"<type>"},"index":<n>}   add a block'+nl
+        +'- {"op":"remove","id":"<blockId>"}'+nl
+        +'- {"op":"move","id":"<blockId>","index":<n>}'+nl
+        +'- {"op":"mset","path":"<dotPath>","value":<any>}   set anything (e.g. "style", "pages./about", "data.collections.signups", "functions.subscribe")'+nl
+        +'- {"op":"mdel","path":"<dotPath>"}'+nl+nl
+        +'ALLOWED block types: '+blocks+nl
+        +'ALLOWED styles: '+styles+nl
+        +'Rules: keep every block id unique; only use allowed block types and styles.'+nl+nl
+        +'CURRENT SITE (the model you are editing):'+nl+JSON.stringify(mdl)+nl+nl
+        +'WHAT I WANT:'+nl+($('want').value||'Improve the homepage and make it look professional.')+nl+nl
+        +'Reply with ONLY the JSON patch.';
+      navigator.clipboard.writeText(p);$('gok').textContent='copied — now paste it into your AI';setTimeout(function(){$('gok').textContent=''},5000);
+    };
+    $('applyb').onclick=function(){
+      var patch=extractPatch($('reply').value);
+      var ops=patch&&(patch.ops||(Array.isArray(patch)?patch:null));
+      if(!ops){$('ares').innerHTML='<span style="color:#ff8a8a">Could not find a JSON patch. Paste the full reply, or ask the AI to reply with only { "ops": [...] }.</span>';return}
+      $('ares').textContent='applying...';
+      api('POST','/api/sophia/patch',{ops:ops}).then(function(r){
+        if(r&&r.ok){$('ares').innerHTML='<span class="ok">Applied! Press Open site to see it.</span>';$('reply').value=''}
+        else{$('ares').innerHTML='<span style="color:#ff8a8a">Rejected: '+esc((r&&r.errors&&r.errors.join('; '))||(r&&r.error)||'invalid patch')+'</span>'}
+      });
+    };
+  }
 
   function starterText(key){
     return 'You can build and edit my live website through its API. Do what I ask by calling it.\n\n'
