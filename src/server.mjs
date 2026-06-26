@@ -36,32 +36,32 @@ const readBody = (req) => new Promise((res) => { let b = ""; req.on("data", (c) 
 const readBodyBuffer = (req) => new Promise((res) => { const cs = []; req.on("data", (c) => cs.push(c)); req.on("end", () => res(Buffer.concat(cs))); });
 const send = (res, code, obj) => { res.writeHead(code, { "Content-Type": "application/json" }); res.end(JSON.stringify(obj)); };
 
-function setupPage(configured) {
-  const title = configured ? "Sign in" : "Get started";
-  const intro = configured
-    ? "Sign in with your admin username and password."
-    : "Create your admin account. This claims the site and gives you a connection to hand your AI.";
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sophia · ${title}</title>
-<style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:radial-gradient(120% 80% at 50% -10%,#0d2036,transparent),#0A1628;color:#e8e8f0;font-family:system-ui,sans-serif}
-.card{width:min(560px,92vw);background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:32px;backdrop-filter:blur(10px)}
+const AUTH_CSS = `*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:radial-gradient(120% 80% at 50% -10%,#0d2036,transparent),#0A1628;color:#e8f4f8;font-family:system-ui,sans-serif}
+.card{width:min(560px,92vw);background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.18);border-radius:18px;padding:32px;backdrop-filter:blur(10px)}
 h1{margin:0 0 6px;font-size:24px}p{color:#7d93a8;margin:0 0 20px;font-size:14px}
-input{width:100%;background:#0d1f30;border:1px solid #2a2a3a;color:#fff;border-radius:10px;padding:13px;font-size:15px;margin-bottom:12px}
-button{width:100%;background:linear-gradient(120deg,#00D4FF,#0066FF);color:#fff;border:0;border-radius:10px;padding:14px;font-weight:600;font-size:16px;cursor:pointer}
-.out{margin-top:18px;display:none}.field{background:#0c0c16;border:1px solid #2a2a3a;border-radius:10px;padding:12px;font-family:ui-monospace,monospace;font-size:13px;word-break:break-all;margin-bottom:10px}
-.label{color:#5a7a90;font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}.hand{background:#10101c;border-left:3px solid #00D4FF;padding:12px;border-radius:8px;font-size:13px;color:#cbd0e6;margin-top:8px}.err{color:#ff7676;font-size:13px;margin-top:8px}.copy{cursor:pointer;float:right;color:#00D4FF;font-size:11px}</style></head>
+input{width:100%;background:#0d1f30;border:1px solid rgba(0,212,255,.2);color:#fff;border-radius:10px;padding:13px;font-size:15px;margin-bottom:12px}
+button{width:100%;background:linear-gradient(120deg,#00D4FF,#0066FF);color:#04121a;border:0;border-radius:10px;padding:14px;font-weight:700;font-size:16px;cursor:pointer}
+.out{margin-top:18px;display:none}.code{background:#0c1a28;border:1px dashed #FF6B35;border-radius:10px;padding:14px;font-family:ui-monospace,monospace;font-size:14px;word-break:break-all;color:#ffd9c2}
+.err{color:#ff7676;font-size:13px;margin-top:8px}.link{display:block;text-align:center;margin-top:16px;color:#7d93a8;font-size:13px}.warn{color:#FF6B35;font-weight:600}`;
+
+function setupPage(configured) {
+  const title = configured ? "Access your dashboard" : "Get started";
+  const intro = configured ? "Enter your admin username and password." : "Create your admin account to claim this site.";
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sophia · ${title}</title><style>${AUTH_CSS}</style></head>
 <body><div class="card">
-  <h1>${title}</h1><p>${intro}</p>
-  <input id="user" autocomplete="username" placeholder="admin username" />
-  <input id="pw" type="password" autocomplete="${configured ? "current-password" : "new-password"}" placeholder="${configured ? "password" : "password (min 8 chars)"}" />
-  <button id="go">${configured ? "Sign in" : "Create account & connect my AI"}</button>
-  <div id="err" class="err"></div>
+  <div id="form">
+    <h1>${title}</h1><p>${intro}</p>
+    <input id="user" autocomplete="username" placeholder="admin username" />
+    <input id="pw" type="password" autocomplete="${configured ? "current-password" : "new-password"}" placeholder="${configured ? "password" : "password (min 8 chars)"}" />
+    <button id="go">${configured ? "Open dashboard" : "Create account"}</button>
+    <div id="err" class="err"></div>
+    <a class="link" href="/_recover">Lost access, or someone else got in? Recover →</a>
+  </div>
   <div id="out" class="out">
-    <h1 style="font-size:18px;margin:6px 0 4px">You're in. Now connect your AI 👇</h1>
-    <p style="margin:0 0 14px">Open ChatGPT, Claude, or Grok and give it these three. It reads the skill and starts building your site.</p>
-    <div class="label">1 · Skill (the instructions)</div><div class="field"><a id="skill" style="color:#00D4FF" target="_blank">…</a></div>
-    <div class="label">2 · Your site URL</div><div class="field" id="url"></div>
-    <div class="label">3 · Agent token</div><div class="field" id="tok"></div>
-    <div class="hand">Tell your AI: “Read <b id="skill2"></b>, then build my website using this token.”</div>
+    <h1 style="font-size:20px">⚠ <span class="warn">Save your recovery code</span></h1>
+    <p>This is the <b>only</b> way back in if you lose your password — or to lock out anyone who gets it. Store it somewhere safe. It won't be shown again.</p>
+    <div class="code" id="rec"></div>
+    <button id="cont" style="margin-top:14px">I saved it — open my dashboard</button>
   </div>
 </div>
 <script>
@@ -71,7 +71,40 @@ button{width:100%;background:linear-gradient(120deg,#00D4FF,#0066FF);color:#fff;
     const r=await fetch('/_setup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:$('user').value,password:$('pw').value})});
     const j=await r.json().catch(()=>({}));
     if(!r.ok){$('err').textContent=j.error||('error '+r.status);return;}
-    window.location = j.redirect || '/dashboard';
+    if(j.first&&j.recoveryCode){$('rec').textContent=j.recoveryCode;$('form').style.display='none';$('out').style.display='block';$('cont').onclick=()=>location.href=j.redirect||'/dashboard';}
+    else location.href=j.redirect||'/dashboard';
+  };
+</script></body></html>`;
+}
+
+function recoverPage() {
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sophia · Recover</title><style>${AUTH_CSS}</style></head>
+<body><div class="card">
+  <div id="form">
+    <h1>Recover ownership</h1><p>Enter your recovery code and set a new admin login. This <b class="warn">logs out everyone and revokes all keys</b> — instantly locking out anyone who had access.</p>
+    <input id="code" placeholder="recovery code (recover-...)" />
+    <input id="user" autocomplete="username" placeholder="new admin username" />
+    <input id="pw" type="password" autocomplete="new-password" placeholder="new password (min 8 chars)" />
+    <button id="go">Recover & lock it down</button>
+    <div id="err" class="err"></div>
+    <a class="link" href="/_setup">Back</a>
+  </div>
+  <div id="out" class="out">
+    <h1 style="font-size:20px">✓ Recovered. <span class="warn">New recovery code</span></h1>
+    <p>Your old code is now dead. Save this new one.</p>
+    <div class="code" id="rec"></div>
+    <button id="cont" style="margin-top:14px">Open my dashboard</button>
+  </div>
+</div>
+<script>
+  const $=(id)=>document.getElementById(id);
+  $('go').onclick=async()=>{
+    $('err').textContent='';
+    const r=await fetch('/_recover',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:$('code').value,username:$('user').value,password:$('pw').value})});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok){$('err').textContent=j.error||('error '+r.status);return;}
+    $('rec').textContent=j.recoveryCode;$('form').style.display='none';$('out').style.display='block';
+    $('cont').onclick=()=>location.href=j.redirect||'/dashboard';
   };
 </script></body></html>`;
 }
@@ -387,8 +420,26 @@ export async function createServer(opts = {}) {
       if (!body.username || String(body.username).trim().length < 2) return send(res, 400, { error: "choose a username (2+ characters)" });
       if (!body.password || String(body.password).length < 8) return send(res, 400, { error: "password must be at least 8 characters" });
       Store.setAdmin(tokens, body.username, body.password);
+      const recoveryCode = Store.newRecoveryCode(tokens);
       setSessionCookie(res);
-      return send(res, 200, { ok: true, first: true, redirect: "/dashboard" });
+      return send(res, 200, { ok: true, first: true, recoveryCode, redirect: "/dashboard" });
+    }
+    // Recover ownership with the one-time code (lost password OR someone got in).
+    if (m === "GET" && p === "/_recover") {
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      return res.end(recoverPage());
+    }
+    if (m === "POST" && p === "/_recover") {
+      const body = JSON.parse((await readBody(req)) || "{}");
+      if (!Store.hasRecovery(tokens)) return send(res, 400, { error: "nothing to recover" });
+      if (!Store.verifyRecovery(tokens, body.code)) return send(res, 401, { error: "wrong recovery code" });
+      if (!body.username || String(body.username).trim().length < 2) return send(res, 400, { error: "choose a username" });
+      if (!body.password || String(body.password).length < 8) return send(res, 400, { error: "password must be at least 8 characters" });
+      Store.setAdmin(tokens, body.username, body.password);
+      Store.revokeAllAccess(tokens);                 // kick out any intruder: all keys + sessions
+      const recoveryCode = Store.newRecoveryCode(tokens); // old code is now dead
+      setSessionCookie(res);
+      return send(res, 200, { ok: true, recoveryCode, redirect: "/dashboard" });
     }
     if (m === "POST" && p === "/_logout") {
       Store.clearSession(tokens, cookies(req).sid); store.saveTokens(tokens);

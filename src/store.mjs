@@ -102,6 +102,29 @@ export class Store {
   }
   static adminUsername(tokens) { return tokens.auth?.username || null; }
 
+  // ── Ownership recovery — a one-time code is the root of trust ──
+  // Generated at "Get started", shown ONCE. If the password is lost OR someone
+  // else gets in, the true owner uses this code to reset the password and kick
+  // everyone out. Self-hosted, so this (or host file access) is the only way back.
+  static newRecoveryCode(tokens) {
+    const code = "recover-" + crypto.randomBytes(15).toString("base64url");
+    const salt = crypto.randomBytes(16).toString("hex");
+    tokens.recovery = { salt, hash: crypto.scryptSync(code, salt, 64).toString("hex") };
+    return code; // plaintext shown once; only the hash is stored
+  }
+  static hasRecovery(tokens) { return !!tokens.recovery?.hash; }
+  static verifyRecovery(tokens, code) {
+    if (!Store.hasRecovery(tokens)) return false;
+    const h = crypto.scryptSync(String(code || ""), tokens.recovery.salt, 64).toString("hex");
+    const a = Buffer.from(h), b = Buffer.from(tokens.recovery.hash);
+    return a.length === b.length && crypto.timingSafeEqual(a, b);
+  }
+  // On recovery: drop every editor key + every session (kick out an intruder).
+  static revokeAllAccess(tokens) {
+    tokens.tokens = (tokens.tokens || []).filter((t) => t.role === "admin");
+    tokens.sessions = [];
+  }
+
   // ── Owner browser sessions (cookie) — how you get into your dashboard ──
   static addSession(tokens) {
     const id = "sess-" + crypto.randomBytes(18).toString("base64url");

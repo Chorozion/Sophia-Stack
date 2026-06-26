@@ -21,7 +21,7 @@ const ok = (c, m) => (c ? (pass++, console.log("  PASS", m)) : (fail++, console.
 try {
   ok(up, "packaged app boots from a dir with NO node_modules (zero runtime deps)");
   const home = await (await fetch(base + "/")).text();
-  ok(home.includes("Your site, built live"), "serves the starter site");
+  ok(home.includes("Your site is ready"), "serves the starter site");
   ok(home.includes("sx-custom-live"), "live CSS layer present");
   const setup = await (await fetch(base + "/_setup")).text();
   ok(setup.includes("Get started") || setup.includes("Create account"), "first-run setup page (Get started)");

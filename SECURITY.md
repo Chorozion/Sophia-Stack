@@ -41,6 +41,24 @@ secrets**, set by the owner after login, used only by backend code, and **never 
 the model or the browser.** Don't commit keys to git. (A dedicated encrypted secrets store
 is on the roadmap; until then, use host environment variables, owner-set.)
 
+## Ownership & recovery
+
+You self-host, so there's no central server to "email a reset." Recovery works like this:
+
+- **At "Get started" you get a one-time recovery code** (`recover-…`). It's shown ONCE.
+  **Save it.** It is the root of trust for your ownership.
+- **Lost your password?** Go to `/_recover`, enter the code, set a new password.
+- **Someone else got your password and is making changes?** `/_recover` with your code
+  resets the login AND **revokes every key and session** — instantly locking the intruder out.
+- **Leaked a key (`mykey-…`)?** Revoke it from the dashboard, or recover to revoke all keys.
+
+**v1 limitations (be honest with yourself):**
+- If you lose **both** your password **and** your recovery code, the only way back is
+  **host-level access** — delete the `auth` block in `.sophia-data/tokens.json` on your
+  server and re-run "Get started." (You own the host, so this is always possible.)
+- **No email-based reset** in v1 (no SMTP). The recovery code is the mechanism.
+- The recovery code is as strong as where you store it. Treat it like a master password.
+
 ## Reporting
 
 Found a vulnerability? Contact the maintainer privately before disclosing publicly.
