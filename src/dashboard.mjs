@@ -59,19 +59,34 @@ a{color:#00D4FF}.hide{display:none}code{color:#FF6B35}</style></head>
       +'<div class="row"><button id="genp" class="ghost">1 &middot; Copy the prompt</button> <span class="ok" id="gok"></span></div>'
       +'<textarea id="reply" placeholder="2 · Paste everything the AI replied here." style="margin-top:10px"></textarea>'
       +'<div class="row"><button id="applyb" class="ghost">Apply to my site</button> <span id="ares" style="font-size:13px"></span></div></div>';
-    // Conversational agent loop: the stack reads/edits on the AI's behalf.
+    // Conversational agent loop: prompt -> Sophia replies + edits the live site.
     var thread=[];
-    function bubble(role,text){var d=document.createElement('div');d.style.cssText='margin:6px 0;padding:9px 12px;border-radius:10px;font-size:14px;line-height:1.5;'+(role==='user'?'background:rgba(0,212,255,.12);margin-left:30px':'background:#0c1a28;border:1px solid rgba(0,212,255,.12);margin-right:30px');d.textContent=text;$('thread').appendChild(d);$('thread').scrollTop=$('thread').scrollHeight}
-    $('go').onclick=function(){
+    function bubble(role,text,note){
+      var d=document.createElement('div');var me=role==='user';
+      d.style.cssText='margin:8px 0;padding:9px 12px;border-radius:10px;font-size:14px;line-height:1.5;'+(me?'background:rgba(0,212,255,.12);margin-left:40px':'background:#0c1a28;border:1px solid rgba(0,212,255,.12);margin-right:40px');
+      var lbl=document.createElement('div');lbl.style.cssText='font-size:11px;color:#7d93a8;margin-bottom:3px';lbl.textContent=me?'You':'Sophia';
+      var body=document.createElement('div');body.style.whiteSpace='pre-wrap';body.textContent=text;
+      d.appendChild(lbl);d.appendChild(body);
+      if(note){var n=document.createElement('div');n.style.cssText='margin-top:6px;font-size:12px;color:#5fd38a';n.textContent=note;d.appendChild(n)}
+      $('thread').appendChild(d);$('thread').scrollTop=$('thread').scrollHeight;
+    }
+    // Greeting + key check on open
+    api('GET','/api/sophia/llm').then(function(j){
+      if(j&&j.configured){bubble('sophia','Hi, I am Sophia. Tell me what you want to build — a landing page, a portfolio, an online shop — and I will create it. We can keep refining it together.')}
+      else{$('needkey').classList.remove('hide');bubble('sophia','Add your AI key in Settings (one-time), then come back here and tell me what to build.')}
+    });
+    function send(){
       var t=$('ask').value.trim(); if(!t){return}
       thread.push({role:'user',content:t}); bubble('user',t); $('ask').value=''; $('r').textContent='Sophia is working...'; $('go').disabled=true;
       api('POST','/api/sophia/agent',{messages:thread}).then(function(j){
         $('go').disabled=false; $('r').textContent='';
-        if(j&&j.error==='no_llm'){$('needkey').classList.remove('hide');return}
-        if(j&&typeof j.reply==='string'){thread.push({role:'assistant',content:j.reply});bubble('sophia',j.reply+(j.applied&&j.applied.length?'   ✓ '+j.applied.length+' change(s) applied':''))}
+        if(j&&j.error==='no_llm'){$('needkey').classList.remove('hide');bubble('sophia','I need an AI key first — add one in Settings.');return}
+        if(j&&typeof j.reply==='string'){thread.push({role:'assistant',content:j.reply});bubble('sophia',j.reply,(j.applied&&j.applied.length)?('✓ '+j.applied.length+' change(s) applied — open your site to see them'):'')}
         else{bubble('sophia',(j&&j.message)||'Something went wrong. Try again.')}
       });
-    };
+    }
+    $('go').onclick=send;
+    $('ask').onkeydown=function(e){if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();send()}};
     var cat=null,mdl=null;
     Promise.all([api('GET','/api/sophia/catalog'),api('GET','/api/sophia/model')]).then(function(r){cat=r[0];mdl=r[1]});
     $('genp').onclick=function(){
