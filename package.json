@@ -8,7 +8,7 @@
   },
   "scripts": {
     "demo": "node demo/demo.mjs",
-    "build": "node scripts/build.mjs",
+    "build": "node scripts/build.mjs && node scripts/catalog.mjs",
     "catalog": "node scripts/catalog.mjs",
     "dev": "node scripts/dev.mjs",
     "serve": "node scripts/serve.mjs",
