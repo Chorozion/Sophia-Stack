@@ -32,6 +32,10 @@ This roadmap is intentionally honest. Anything not marked ✅ is **not** in the 
 
 ## 🚧 In progress / next
 
+- **VEX — live preview pane in the builder** — split-screen chat + real-time preview that updates via
+  SSE as you edit, with optimistic preview, changed-element highlighting, and Apply / Discard.
+- **Vector memory for the builder** — semantic retrieval over past edits, templates, and docs to give
+  the AI builder long-term context (optional; off without embeddings).
 - **Sophia SEO Suite** — the first major extension (built in a separate repo against the
   [extension contract](docs/extensions/sophia-seo-suite-contract.md)).
 

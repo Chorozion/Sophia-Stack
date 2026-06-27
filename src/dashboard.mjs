@@ -49,7 +49,9 @@ a{color:#00D4FF}.hide{display:none}code{color:#FF6B35}</style></head>
   }
   function build(P){
     P.innerHTML=
-      '<div class="card"><h2>Build with Sophia <span style="color:#7d93a8;font-size:12px">(needs an AI key in Settings)</span></h2><p>Chat with the builder. It reads your site, makes the changes, fixes its own mistakes, and keeps going &mdash; like Bolt, on your own site.</p>'
+      '<div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">'
+      +'<div style="flex:1 1 360px;min-width:300px">'
+      +'<div class="card"><h2>Build with Sophia <span style="color:#7d93a8;font-size:12px">(needs an AI key in Settings)</span></h2><p>Chat with the builder. It reads your site, makes the changes, fixes its own mistakes, and keeps going &mdash; like Bolt, on your own site.</p>'
       +'<div id="thread" style="max-height:320px;overflow:auto;margin-bottom:10px"></div>'
       +'<textarea id="ask" placeholder="e.g. Build a coffee shop landing page: a hero, a menu section, opening hours, and a contact form. Warm colors."></textarea>'
       +'<div class="row"><button id="go">Send</button> <a href="/" target="_blank" style="margin-left:4px">Open site &rarr;</a> <span id="r" style="font-size:13px"></span></div>'
@@ -58,7 +60,32 @@ a{color:#00D4FF}.hide{display:none}code{color:#FF6B35}</style></head>
       +'<textarea id="want" placeholder="What do you want? e.g. a landing page for my coffee shop with hours and a contact form."></textarea>'
       +'<div class="row"><button id="genp" class="ghost">1 &middot; Copy the prompt</button> <span class="ok" id="gok"></span></div>'
       +'<textarea id="reply" placeholder="2 · Paste everything the AI replied here." style="margin-top:10px"></textarea>'
-      +'<div class="row"><button id="applyb" class="ghost">Apply to my site</button> <span id="ares" style="font-size:13px"></span></div></div>';
+      +'<div class="row"><button id="applyb" class="ghost">Apply to my site</button> <span id="ares" style="font-size:13px"></span></div></div>'
+      +'</div>'
+      +'<div style="flex:1 1 440px;min-width:320px;position:sticky;top:12px">'
+      +'<div class="card" style="padding:14px">'
+      +'<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px"><h2 style="margin:0">VEX <span style="color:#7d93a8;font-size:12px">live preview</span></h2>'
+      +'<label style="font-size:12px;color:#cfe6f0;cursor:pointer"><input type="checkbox" id="vexprev" style="width:auto;margin-right:5px;vertical-align:middle">Preview before applying</label></div>'
+      +'<div id="vexbar" class="hide" style="margin-bottom:8px;padding:9px 11px;border-radius:9px;background:rgba(0,212,255,.10);border:1px solid rgba(0,212,255,.25);font-size:13px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span id="vexmsg" style="flex:1">Previewing &mdash; not yet live.</span><button id="vexapply" style="padding:5px 12px">Apply to Live Site</button><button id="vexdiscard" class="ghost" style="padding:5px 12px">Discard</button></div>'
+      +'<iframe id="vexframe" src="/?vex=1" style="width:100%;height:540px;border:1px solid rgba(0,212,255,.18);border-radius:10px;background:#fff"></iframe>'
+      +'<div style="font-size:11px;color:#7d93a8;margin-top:6px">Edits land here live as you chat. With <b>Preview</b> on, changes stage here first &mdash; then Apply or Discard.</div>'
+      +'</div></div>'
+      +'</div>';
+    // VEX preview pane wiring (same-origin postMessage to the iframe).
+    function vexPost(msg){var f=$('vexframe');if(f&&f.contentWindow){try{f.contentWindow.postMessage(msg,location.origin)}catch(e){}}}
+    var pendingPreview=null, staged=null;
+    window.addEventListener('message',function(e){if(e.origin!==location.origin)return;if(e.data&&e.data.__vex==='ready'&&pendingPreview){vexPost({__vex:'preview',ops:pendingPreview.ops||[],css:pendingPreview.css})}});
+    function showPreview(p){staged=p;pendingPreview=p;$('vexbar').classList.remove('hide');$('vexmsg').textContent='Previewing '+((p.ops&&p.ops.length)||0)+' change(s) — not yet live.';vexPost({__vex:'reset'})}
+    function clearPreview(){pendingPreview=null;staged=null;$('vexbar').classList.add('hide');vexPost({__vex:'reset'})}
+    $('vexdiscard').onclick=function(){clearPreview()};
+    $('vexapply').onclick=function(){
+      if(!staged){return} var s=staged; $('vexmsg').textContent='Applying…';
+      var doCss=(typeof s.css==='string')?api('PUT','/api/sophia/css',{css:s.css}):Promise.resolve({ok:true});
+      doCss.then(function(){return (s.ops&&s.ops.length)?api('POST','/api/sophia/patch',{ops:s.ops}):{ok:true}}).then(function(r){
+        if(r&&r.ok!==false){bubble('sophia','Applied to your live site ✓');pendingPreview=null;staged=null;$('vexbar').classList.add('hide');vexPost({__vex:'reset'})}
+        else{$('vexmsg').textContent='Apply rejected: '+esc((r&&r.error)||'invalid');}
+      });
+    };
     // Conversational agent loop: prompt -> Sophia replies + edits the live site.
     var thread=[];
     function bubble(role,text,note){
@@ -77,11 +104,16 @@ a{color:#00D4FF}.hide{display:none}code{color:#FF6B35}</style></head>
     });
     function send(){
       var t=$('ask').value.trim(); if(!t){return}
+      var prev=$('vexprev').checked;
       thread.push({role:'user',content:t}); bubble('user',t); $('ask').value=''; $('r').textContent='Sophia is working...'; $('go').disabled=true;
-      api('POST','/api/sophia/agent',{messages:thread}).then(function(j){
+      api('POST','/api/sophia/agent',{messages:thread,preview:prev}).then(function(j){
         $('go').disabled=false; $('r').textContent='';
         if(j&&j.error==='no_llm'){$('needkey').classList.remove('hide');bubble('sophia','I need an AI key first — add one in Settings.');return}
-        if(j&&typeof j.reply==='string'){thread.push({role:'assistant',content:j.reply});bubble('sophia',j.reply,(j.applied&&j.applied.length)?('✓ '+j.applied.length+' change(s) applied — open your site to see them'):'')}
+        if(j&&typeof j.reply==='string'){
+          thread.push({role:'assistant',content:j.reply});
+          if(prev&&j.preview&&((j.preview.ops&&j.preview.ops.length)||typeof j.preview.css==='string')){bubble('sophia',j.reply,'↗ Previewing in VEX — Apply or Discard on the right');showPreview(j.preview)}
+          else{bubble('sophia',j.reply,(j.applied&&j.applied.length)?('✓ '+j.applied.length+' change(s) applied — see the preview →'):'')}
+        }
         else{bubble('sophia',(j&&j.message)||'Something went wrong. Try again.')}
       });
     }

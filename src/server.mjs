@@ -708,26 +708,41 @@ ${CORE_FOOTER}
       let catalog; try { catalog = JSON.parse(readFileSync(catalogPath, "utf8")); } catch { catalog = { blocks: {}, styles: [] }; }
       const messages = [{ role: "system", content: agentSystemPrompt(catalog) }, ...history];
       const applied = [];
+      // VEX preview mode: stage edits against a clone (validated) WITHOUT committing,
+      // so the builder can show them optimistically and the owner Applies or Discards.
+      const preview = !!body.preview;
+      let previewModel = model, previewCss = null; const previewOps = [];
+      const stagePatch = (ops) => {
+        const r = applyPatch(previewModel, ops || []);
+        const v = validateModel(r.model);
+        if (!v.ok) return { ok: false, code: 422, error: "edit rejected — would break the site", details: v.errors };
+        previewModel = r.model; previewOps.push(...(ops || []));
+        return { ok: true, changed: r.changed, preview: true };
+      };
+      const finish = (reply) => send(res, 200, preview ? { ok: true, reply, applied, preview: { ops: previewOps, css: previewCss } } : { ok: true, reply, applied });
       try {
         for (let step = 0; step < 10; step++) {
           const msg = await callLLM(llm, messages);
           if (!msg) return send(res, 502, { error: "llm_error", message: "empty AI response" });
           messages.push(msg);
           const calls = msg.tool_calls || [];
-          if (!calls.length) return send(res, 200, { ok: true, reply: msg.content || "Done.", applied });
+          if (!calls.length) return finish(msg.content || "Done.");
           for (const tc of calls) {
             let args = {}; try { args = JSON.parse((tc.function && tc.function.arguments) || "{}"); } catch {}
             const name = tc.function && tc.function.name;
             let result;
-            if (name === "read_model") result = JSON.stringify(model);
+            if (name === "read_model") result = JSON.stringify(preview ? previewModel : model);
             else if (name === "read_catalog") result = readFileSync(catalogPath, "utf8");
-            else if (name === "apply_patch") { const r = doPatch(args.ops || []); if (r.ok && r.changed) applied.push(...r.changed); result = JSON.stringify(r); }
-            else if (name === "set_css") { const r = doSetCss(args.css || ""); if (r.ok) applied.push("css"); result = JSON.stringify(r); }
+            else if (name === "apply_patch") { const r = preview ? stagePatch(args.ops || []) : doPatch(args.ops || []); if (r.ok && r.changed) applied.push(...r.changed); result = JSON.stringify(r); }
+            else if (name === "set_css") {
+              if (preview) { const s = sanitizeCss(args.css || ""); if (s.ok) { previewCss = s.css; result = JSON.stringify({ ok: true, preview: true }); } else result = JSON.stringify({ ok: false, error: "unsafe css", details: s.errors }); }
+              else { const r = doSetCss(args.css || ""); if (r.ok) applied.push("css"); result = JSON.stringify(r); }
+            }
             else result = "unknown tool";
             messages.push({ role: "tool", tool_call_id: tc.id, content: String(result).slice(0, 8000) });
           }
         }
-        return send(res, 200, { ok: true, reply: "I made several changes (hit the step limit). Tell me to continue if there's more.", applied });
+        return finish("I made several changes (hit the step limit). Tell me to continue if there's more.");
       } catch (e) { return send(res, 502, { error: "llm_unreachable", message: String(e.message || e) }); }
     }
 
