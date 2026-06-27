@@ -51,6 +51,7 @@ ${c.gray("Templates:")}
 ${c.gray("Deployment data (run next to a deployment's .sophia-data):")}
   sophia backup [--out FILE]      back up ./.sophia-data to a .tgz
   sophia restore <FILE>           restore ./.sophia-data from a backup
+  sophia update [--apply]         check for a new version (and update, keeping your data)
   sophia deploy                   build the artifact + print deploy guidance
 
   sophia help                this help`;
@@ -188,7 +189,48 @@ async function aiCmd(sub) {
   die(`unknown ai command "${sub}".`, "sophia ai:list | ai:doctor | ai:test | ai:set-default <name>");
 }
 
+async function updateCmd(args) {
+  loadEnv();
+  const { cachedCheck } = await import("../src/updater.mjs");
+  info("checking for updates…");
+  const u = await cachedCheck({ force: true });
+  if (u.enabled === false) return info(c.yellow("update checks are disabled (SOPHIA_UPDATE_CHECK=off)."));
+  if (u.error) return die("could not reach the update channel: " + u.error, "check your network, or set SOPHIA_UPDATE_URL");
+  console.log("  installed: " + c.cyan(u.current) + "    latest: " + c.cyan(u.latest));
+  if (!u.updateAvailable) return ok("you're up to date.");
+  console.log("\n  " + c.green("Update available → " + u.latest));
+  if (u.notes) console.log(c.gray("  " + u.notes.split("\n").slice(0, 6).join("\n  ")));
+  if (u.releaseUrl) console.log("  release notes: " + u.releaseUrl);
+  console.log(c.gray("\n  Your data is safe — .sophia-data is preserved and auto-migrated on the new code."));
+  if (!args.includes("--apply")) return console.log("  To update now:  " + c.cyan("sophia update --apply"));
+  if (!u.asset) return die("no downloadable asset on the latest release.", "update manually from " + u.releaseUrl);
+  await applyUpdate(u);
+}
+async function applyUpdate(u) {
+  const tmp = join(CWD, ".sophia-update");
+  mkdirSync(tmp, { recursive: true });
+  const zipPath = join(tmp, u.asset.name || "sophia-stack.zip");
+  info("downloading " + (u.asset.name || "release") + " …");
+  const res = await fetch(u.asset.url);
+  if (!res.ok) return die("download failed: HTTP " + res.status);
+  writeFileSync(zipPath, Buffer.from(await res.arrayBuffer()));
+  const codeBak = join(tmp, "code-backup-" + u.current);
+  mkdirSync(codeBak, { recursive: true });
+  for (const f of ["app.js", "catalog.json"]) if (existsSync(join(CWD, f))) cpSync(join(CWD, f), join(codeBak, f));
+  if (existsSync(join(CWD, "public"))) cpSync(join(CWD, "public"), join(codeBak, "public"), { recursive: true });
+  const ex = join(tmp, "extracted"); mkdirSync(ex, { recursive: true });
+  let r = spawnSync("unzip", ["-o", zipPath, "-d", ex], { stdio: "inherit" });
+  if (r.error || r.status !== 0) r = spawnSync("tar", ["-xf", zipPath, "-C", ex], { stdio: "inherit" });
+  if (r.error || r.status !== 0) return die("could not extract the archive (need `unzip` or `tar`).", "extract " + zipPath + " yourself, then copy app.js/public/catalog.json over (keep .sophia-data)");
+  for (const f of ["app.js", "catalog.json"]) if (existsSync(join(ex, f))) cpSync(join(ex, f), join(CWD, f));
+  if (existsSync(join(ex, "public"))) cpSync(join(ex, "public"), join(CWD, "public"), { recursive: true });
+  ok("updated to " + u.latest + " — .sophia-data untouched (it auto-migrates on boot).");
+  console.log("  Restart to finish:  Passenger " + c.cyan("touch tmp/restart.txt") + "  ·  pm2 " + c.cyan("pm2 restart all") + "  ·  systemd " + c.cyan("systemctl restart <svc>"));
+  console.log(c.gray("  Old code backed up at " + codeBak));
+}
+
 if (cmd === "ai" || (cmd && cmd.startsWith("ai:"))) { await aiCmd(cmd.startsWith("ai:") ? cmd.slice(3) : argv[1]); process.exit(0); }
+if (cmd === "update") { await updateCmd(argv.slice(1)); process.exit(0); }
 
 switch (cmd) {
   case "doctor": doctor(); break;

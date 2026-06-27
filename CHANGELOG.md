@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Self-update + non-destructive auto-migration**: deployments check the public release channel
+  (`GET /api/sophia/update`, Settings → Updates banner, `sophia update [--apply]`), and on boot they
+  migrate stored data **forward, safely** — backing up state first, running only additive migrations,
+  and stamping the new version only on success (`src/updater.mjs`, `src/migrate.mjs`,
+  `src/version.mjs`). New `update.available` extension hook. Pull-based (no telemetry; opt-out via
+  `SOPHIA_UPDATE_CHECK=off`). See `docs/operations/updates.md`.
 - **SEO metadata rendering**: optional `model.seo` (site defaults) + `pages.<route>.seo` are now served
   in `<head>` — meta description, canonical, robots, OpenGraph, Twitter Card, and script-safe JSON-LD.
 - **Enumerable versions + targeted rollback**: `GET /api/sophia/versions` (ids/labels), an optional

@@ -26,8 +26,9 @@ import { ExtensionHost } from "./extensions.mjs";
 import { makeAudit } from "./audit.mjs";
 import { AccountStore } from "./accounts.mjs";
 import { resolvePayments, createCheckout, listProducts, createProduct, verifyWebhook } from "./payments.mjs";
-
-const STACK_VERSION = "1.0.0";
+import { VERSION as STACK_VERSION } from "./version.mjs";
+import { migrate } from "./migrate.mjs";
+import { cachedCheck } from "./updater.mjs";
 
 const DEFAULT_CLIENT_JS = fileURLToPath(new URL("../public/client.js", import.meta.url));
 const DEFAULT_CATALOG = fileURLToPath(new URL("../catalog.json", import.meta.url));
@@ -171,6 +172,11 @@ export async function createServer(opts = {}) {
   const clientJs = opts.clientJs || DEFAULT_CLIENT_JS;
   const catalogPath = opts.catalogPath || DEFAULT_CATALOG;
   const store = new Store(dir);
+  // Non-destructive forward migration BEFORE loading: an existing deployment booting
+  // on newer code brings its stored data up to date safely (backs up, never deletes).
+  const migration = migrate(dir, STACK_VERSION);
+  if (migration.migrated) console.log(`[migrate] ${migration.from} -> ${migration.to} (applied: ${migration.applied.join(", ")})`);
+  else if (migration.error) console.error(`[migrate] ${migration.error}`);
   const dataStore = new DataStore(dir);   // the app's contained backend (collections)
   const mediaStore = new MediaStore(dir); // photos / files / video, hosted in-instance
   const accounts = new AccountStore(dir); // end-user accounts (site visitors who sign up)
@@ -422,6 +428,13 @@ ${CORE_FOOTER}
     if (m === "GET" && p === "/api/sophia/audit") {
       if (!isAdmin(req)) return send(res, 401, { error: "owner only" });
       return send(res, 200, { entries: audit.tail(Number(url.searchParams.get("n")) || 200) });
+    }
+    // Update awareness: is a newer Stack version available? (owner-only; opt-out via env)
+    if (m === "GET" && p === "/api/sophia/update") {
+      if (!isAdmin(req)) return send(res, 401, { error: "owner only" });
+      const info = await cachedCheck({ force: url.searchParams.get("force") === "1" });
+      if (info.updateAvailable) extHost.emit("update.available", { current: info.current, latest: info.latest, releaseUrl: info.releaseUrl });
+      return send(res, 200, info);
     }
 
     // ── End-user accounts (site visitors sign up / log in here) ──

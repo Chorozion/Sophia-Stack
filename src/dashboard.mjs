@@ -181,7 +181,8 @@ a{color:#00D4FF}.hide{display:none}code{color:#FF6B35}</style></head>
     });
   }
   function settings(P){
-    P.innerHTML='<div class="card"><h2>AI key &mdash; let Sophia build for you</h2><p>Pick a provider, tap <b>Get a key</b>, sign up, copy the key, paste it below. Tap <b>Use</b> to auto-fill the model + URL. Then chat on the Build tab.</p>'
+    P.innerHTML='<div class="card" id="updcard"><h2>Updates</h2><p id="upd" style="margin:0">Checking for updates&hellip;</p></div>'
+      +'<div class="card"><h2>AI key &mdash; let Sophia build for you</h2><p>Pick a provider, tap <b>Get a key</b>, sign up, copy the key, paste it below. Tap <b>Use</b> to auto-fill the model + URL. Then chat on the Build tab.</p>'
       +'<div class="label">Providers (free signups)</div><div id="provs"></div>'
       +'<div class="label">API key</div><input id="lk" placeholder="(leave blank to keep current)"><div class="label">Model</div><input id="lm" placeholder="gpt-4o-mini"><div class="label">API base URL (advanced)</div><input id="lb" placeholder="https://api.openai.com/v1">'
       +'<div class="row"><button id="sl">Save</button> <span class="ok" id="lok"></span></div></div>'
@@ -195,6 +196,7 @@ a{color:#00D4FF}.hide{display:none}code{color:#FF6B35}</style></head>
       +'<div class="label">Webhook signing secret</div><input id="pwh" placeholder="whsec_… (leave blank to keep current)">'
       +'<div class="label">Publishable key (optional)</div><input id="ppk" placeholder="pk_…">'
       +'<div class="row"><button id="sp">Save</button> <span class="ok" id="pok"></span></div></div>';
+    api('GET','/api/sophia/update').then(function(j){var el=$('upd');if(!el)return;if(j.enabled===false){el.textContent='Update checks are off (SOPHIA_UPDATE_CHECK=off).';return}if(j.error){el.textContent='Installed v'+(j.current||'?')+' — could not check ('+j.error+').';return}if(j.updateAvailable){el.innerHTML='<b style="color:#FF6B35">Update available: v'+esc(j.latest)+'</b> &mdash; you have v'+esc(j.current)+'. Your data is preserved and auto-migrated. Run <code>sophia update --apply</code>, or replace app.js/public/catalog.json and restart.'+(j.releaseUrl?' <a href="'+esc(j.releaseUrl)+'" target="_blank" rel="noopener">What&rsquo;s new &#8599;</a>':'')}else{el.innerHTML='You&rsquo;re on the latest version (v'+esc(j.current)+') &check;'}}).catch(function(){});
     api('GET','/api/sophia/brief').then(function(j){$('brief').value=j.brief||''});
     $('sb').onclick=function(){api('PUT','/api/sophia/brief',{brief:$('brief').value}).then(function(){$('bok').textContent='saved ✓';setTimeout(function(){$('bok').textContent=''},2000)})};
     api('GET','/api/sophia/oauth').then(function(j){$('oe').checked=!!j.enabled;$('ocid').value=j.clientId||'';$('oem').value=j.allowedEmail||''});
