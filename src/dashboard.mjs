@@ -2,20 +2,20 @@
 // Keys · Settings). Plain vanilla JS (no backticks inside) so it nests safely.
 export function dashboardPage(username) {
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sophia · Dashboard</title>
-<style>*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(120% 70% at 50% -10%,#0d2036,transparent),#0A1628;color:#e8f4f8;font-family:system-ui,sans-serif}
-.wrap{max-width:820px;margin:0 auto;padding:24px 18px 70px}
+<style>*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(110% 55% at 50% -8%,#0d2036,transparent),#0a1626;color:#e6f0f5;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;font-size:14px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1040px;margin:0 auto;padding:20px 18px 60px}
 .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}.brand{font-weight:700;font-size:20px;color:#00D4FF}
-.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px}.tab{padding:9px 14px;border-radius:10px;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.16);color:#9fc7d6;font-size:14px;cursor:pointer}.tab.on{background:linear-gradient(120deg,#00D4FF,#0066FF);color:#04121a;font-weight:700;border-color:transparent}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:16px}.tab{padding:7px 12px;border-radius:8px;background:transparent;border:1px solid transparent;color:#8aa6b8;font-size:13px;cursor:pointer;transition:.12s}.tab:hover{color:#cfe0ea;background:rgba(255,255,255,.04)}.tab.on{background:rgba(0,194,224,.12);color:#00d4ff;font-weight:600;border-color:rgba(0,194,224,.32)}
 .logout{color:#7d93a8;font-size:13px;cursor:pointer;background:none;border:1px solid rgba(0,212,255,.2);border-radius:8px;padding:7px 12px}
-.card{background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.16);border-radius:14px;padding:20px;margin-bottom:14px}
-h2{font-size:16px;margin:0 0 4px}p{color:#7d93a8;font-size:13px;margin:0 0 12px}
-input,textarea{width:100%;background:#0d1f30;border:1px solid rgba(0,212,255,.2);color:#fff;border-radius:9px;padding:11px;font-size:14px;margin-bottom:8px}textarea{min-height:110px;line-height:1.5;resize:vertical}
-button{background:linear-gradient(120deg,#00D4FF,#0066FF);color:#04121a;border:0;border-radius:9px;padding:10px 16px;font-weight:700;font-size:14px;cursor:pointer}
-button.ghost{background:none;border:1px solid rgba(0,212,255,.25);color:#9fc7d6}button.danger{background:none;border:1px solid #ff6b6b55;color:#ff8a8a;padding:5px 10px;font-size:12px}
+.card{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.08);border-radius:11px;padding:16px;margin-bottom:12px}
+h2{font-size:15px;font-weight:600;margin:0 0 3px}p{color:#8499a8;font-size:13px;margin:0 0 11px;line-height:1.5}
+input,textarea{width:100%;background:#0c1c2b;border:1px solid rgba(255,255,255,.1);color:#fff;border-radius:8px;padding:9px 11px;font-size:13.5px;margin-bottom:8px}input:focus,textarea:focus{outline:0;border-color:rgba(0,194,224,.5)}textarea{min-height:104px;line-height:1.5;resize:vertical}
+button{background:#00c2e0;color:#04212c;border:0;border-radius:8px;padding:8px 14px;font-weight:600;font-size:13.5px;cursor:pointer;transition:.12s}button:hover{background:#1ccdec}button:disabled{opacity:.5;cursor:default}
+button.ghost{background:transparent;border:1px solid rgba(255,255,255,.14);color:#cfe0ea}button.ghost:hover{background:rgba(255,255,255,.05)}button.danger{background:none;border:1px solid rgba(255,107,107,.32);color:#ff8a8a;padding:5px 10px;font-size:12px;font-weight:500}
 .field{background:#08141f;border:1px solid rgba(0,212,255,.18);border-radius:9px;padding:11px;font-family:ui-monospace,monospace;font-size:13px;word-break:break-all;margin-top:8px}
 .label{color:#5a7a90;font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin:10px 0 4px}
 .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.ok{color:#5fd38a;font-size:13px}.copy{cursor:pointer;color:#00D4FF;font-size:12px;margin-left:8px}
-.item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:#0c1a28;border:1px solid rgba(0,212,255,.12);border-radius:9px;margin-bottom:8px;font-size:14px}
+.item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);border-radius:8px;margin-bottom:7px;font-size:13.5px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}.thumb{background:#0c1a28;border:1px solid rgba(0,212,255,.12);border-radius:9px;padding:8px;text-align:center;font-size:11px}.thumb img{width:100%;height:80px;object-fit:cover;border-radius:6px}
 a{color:#00D4FF}.hide{display:none}code{color:#FF6B35}</style></head>
 <body><div class="wrap">
@@ -116,7 +116,7 @@ a{color:#00D4FF}.hide{display:none}code{color:#FF6B35}</style></head>
       +'<div class="card" style="padding:14px">'
       +'<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px"><h2 style="margin:0">VEX <span style="color:#7d93a8;font-size:12px">live preview</span></h2>'
       +'<label style="font-size:12px;color:#cfe6f0;cursor:pointer"><input type="checkbox" id="vexprev" checked style="width:auto;margin-right:5px;vertical-align:middle">Preview before going live</label></div>'
-      +'<div id="vexbar" class="hide" style="margin-bottom:8px;padding:10px 12px;border-radius:10px;background:rgba(0,212,255,.12);border:1px solid rgba(0,212,255,.3);font-size:13px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span id="vexmsg" style="flex:1">Previewing &mdash; not live yet.</span><button id="vexapply" style="padding:7px 16px;font-weight:700">🚀 Push to Live</button><button id="vexdiscard" class="ghost" style="padding:7px 14px">Discard</button></div>'
+      +'<div id="vexbar" class="hide" style="margin-bottom:8px;padding:10px 12px;border-radius:10px;background:rgba(0,212,255,.12);border:1px solid rgba(0,212,255,.3);font-size:13px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span id="vexmsg" style="flex:1">Previewing &mdash; not live yet.</span><button id="vexapply">Push to Live</button><button id="vexdiscard" class="ghost">Discard</button></div>'
       +'<iframe id="vexframe" src="/?vex=1" style="width:100%;height:540px;border:1px solid rgba(0,212,255,.18);border-radius:10px;background:#fff"></iframe>'
       +'<div style="font-size:11px;color:#7d93a8;margin-top:6px">Edits land here live as you chat. With <b>Preview</b> on, changes stage here first &mdash; then Apply or Discard.</div>'
       +'</div></div>'
