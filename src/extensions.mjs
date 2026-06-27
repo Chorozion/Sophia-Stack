@@ -18,6 +18,7 @@ export const PERMISSIONS = [
   "site:read", "site:patch", "pages:read", "pages:patch",
   "media:read", "media:write", "data:read", "data:write",
   "settings:read", "settings:write", "ai:use", "jobs:run", "audit:read",
+  "accounts:read", "accounts:write",
 ];
 
 export const HOOKS = [
@@ -85,6 +86,16 @@ export class ExtensionHost {
         patch: (ops) => { need("pages:patch"); const r = host.deps.doPatch(ops); host.audit.log("ext:" + id, "pages.patch", { ok: r.ok }); return r; },
       },
       media: { list: () => { need("media:read"); return host.deps.mediaStore.list(); } },
+      // End-user accounts (members) — for memberships, portals, and payments.
+      accounts: {
+        list: () => { need("accounts:read"); return host.deps.accounts.list(); },
+        count: () => { need("accounts:read"); return host.deps.accounts.count(); },
+        get: (uid) => { need("accounts:read"); return host.deps.accounts.get(uid); },
+        getByEmail: (e) => { need("accounts:read"); const u = host.deps.accounts.getByEmail(e); return u ? host.deps.accounts.get(u.id) : null; },
+        create: (email, pw, meta) => { need("accounts:write"); return host.deps.accounts.create(email, pw, meta); },
+        update: (uid, patch) => { need("accounts:write"); return host.deps.accounts.update(uid, patch); },
+        remove: (uid) => { need("accounts:write"); return host.deps.accounts.remove(uid); },
+      },
       data: {
         list: (c, o) => { need("data:read"); return host.deps.dataStore.list(c, o || {}); },
         get: (c, i) => { need("data:read"); return host.deps.dataStore.get(c, i); },

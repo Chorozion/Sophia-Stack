@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **End-user accounts** (`src/accounts.mjs`): member signup/login/logout/me + password change, owner
+  member listing, `scrypt`+salt+`timingSafeEqual`, per-email brute-force lockout, HttpOnly sessions.
+  Exposed to extensions via `ctx.accounts` (`accounts:read`/`accounts:write`). Foundation for
+  memberships, portals, and subscription billing. See `docs/platform/accounts.md`.
 - **Provider-agnostic AI layer** (`src/providers.mjs`): typed adapters for OpenAI-compatible,
   Anthropic, and Gemini; local models (Ollama/LM Studio/vLLM) + custom endpoints; env-based config
   (`.env.example`) and dashboard config; `sophia ai:list/doctor/test/set-default`.

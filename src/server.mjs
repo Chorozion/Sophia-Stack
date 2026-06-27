@@ -24,6 +24,7 @@ import { dashboardPage } from "./dashboard.mjs";
 import { callProvider, resolveProvider, envProviders } from "./providers.mjs";
 import { ExtensionHost } from "./extensions.mjs";
 import { makeAudit } from "./audit.mjs";
+import { AccountStore } from "./accounts.mjs";
 
 const STACK_VERSION = "1.0.0";
 
@@ -171,6 +172,7 @@ export async function createServer(opts = {}) {
   const store = new Store(dir);
   const dataStore = new DataStore(dir);   // the app's contained backend (collections)
   const mediaStore = new MediaStore(dir); // photos / files / video, hosted in-instance
+  const accounts = new AccountStore(dir); // end-user accounts (site visitors who sign up)
   const loaded = store.load(seedModel);
   let model = loaded.model;
   let css = loaded.css;
@@ -210,6 +212,9 @@ export async function createServer(opts = {}) {
   const isAdmin = (req) => sessionOk(req) || !!auth(req, "admin");
   // canEdit = owner session OR any valid key (editor/admin) — for building the site.
   const canEdit = (req) => sessionOk(req) || !!auth(req);
+  // The end-user (site visitor) logged in via the `uid` cookie — NOT the owner.
+  const currentUser = (req) => accounts.sessionUser(cookies(req).uid);
+  const userCookie = (res, token) => res.setHeader("Set-Cookie", `uid=${token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=2592000`);
 
   // Brute-force guard for login + recovery: lock an IP for 15 min after 8 fails.
   const authFails = new Map();
@@ -261,7 +266,7 @@ export async function createServer(opts = {}) {
     stackVersion: STACK_VERSION,
     getModel: () => model,
     doPatch, doSetCss,
-    store, dataStore, mediaStore,
+    store, dataStore, mediaStore, accounts,
     aiGenerate: async (opts) => {
       const llm = resolveProvider(tokens.llm);
       if (!llm) throw new Error("no AI provider configured");
@@ -393,7 +398,7 @@ ${CORE_FOOTER}
       const slash = rest.indexOf("/");
       const id = slash === -1 ? rest : rest.slice(0, slash);
       const subpath = slash === -1 ? "" : rest.slice(slash + 1);
-      const helpers = { send, readBody, origin: origin(req), isAdmin: isAdmin(req), canEdit: canEdit(req), hasToken: !!auth(req), audit };
+      const helpers = { send, readBody, origin: origin(req), isAdmin: isAdmin(req), canEdit: canEdit(req), hasToken: !!auth(req), user: currentUser(req), audit };
       if (await extHost.dispatchRoute(id, subpath, req, res, helpers)) return;
       return send(res, 404, { error: "no such extension route" });
     }
@@ -406,6 +411,51 @@ ${CORE_FOOTER}
     if (m === "GET" && p === "/api/sophia/audit") {
       if (!isAdmin(req)) return send(res, 401, { error: "owner only" });
       return send(res, 200, { entries: audit.tail(Number(url.searchParams.get("n")) || 200) });
+    }
+
+    // ── End-user accounts (site visitors sign up / log in here) ──
+    if (p.startsWith("/api/accounts")) {
+      if (m === "POST" && p === "/api/accounts/signup") {
+        if (!guardOk(req)) return send(res, 429, { error: "too many attempts" });
+        const b = JSON.parse((await readBody(req)) || "{}");
+        const r = accounts.create(b.email, b.password, b.meta);
+        if (!r.ok) { guardFail(req); return send(res, 400, { error: r.error }); }
+        userCookie(res, accounts.startSession(r.user.id));
+        audit.log("account:" + r.user.id, "signup", { email: r.user.email });
+        return send(res, 200, { ok: true, user: r.user });
+      }
+      if (m === "POST" && p === "/api/accounts/login") {
+        if (!guardOk(req)) return send(res, 429, { error: "too many attempts" });
+        const b = JSON.parse((await readBody(req)) || "{}");
+        const r = accounts.verify(b.email, b.password);
+        if (!r.ok) { guardFail(req); return send(res, 401, { error: r.error }); }
+        guardClear(req); userCookie(res, accounts.startSession(r.user.id));
+        return send(res, 200, { ok: true, user: r.user });
+      }
+      if (m === "POST" && p === "/api/accounts/logout") {
+        accounts.endSession(cookies(req).uid);
+        res.setHeader("Set-Cookie", "uid=; HttpOnly; Path=/; Max-Age=0");
+        return send(res, 200, { ok: true });
+      }
+      if (m === "GET" && p === "/api/accounts/me") {
+        const u = currentUser(req); return u ? send(res, 200, { user: u }) : send(res, 401, { error: "not signed in" });
+      }
+      if (m === "POST" && p === "/api/accounts/password") {
+        const u = currentUser(req); if (!u) return send(res, 401, { error: "not signed in" });
+        const b = JSON.parse((await readBody(req)) || "{}");
+        if (!accounts.verify(u.email, b.current).ok) return send(res, 401, { error: "current password is wrong" });
+        const r = accounts.setPassword(u.id, b.password); return send(res, r.ok ? 200 : 400, r);
+      }
+      // Owner-only: manage the member list.
+      if (m === "GET" && p === "/api/accounts") {
+        if (!isAdmin(req)) return send(res, 401, { error: "owner only" });
+        return send(res, 200, { users: accounts.list(), count: accounts.count() });
+      }
+      if (m === "DELETE" && p.startsWith("/api/accounts/")) {
+        if (!isAdmin(req)) return send(res, 401, { error: "owner only" });
+        return send(res, 200, accounts.remove(p.slice("/api/accounts/".length)));
+      }
+      return send(res, 404, { error: "unknown accounts route" });
     }
 
     // model.data.collections[col].access = { create: "public"|"token", read: "public"|"token" }.
