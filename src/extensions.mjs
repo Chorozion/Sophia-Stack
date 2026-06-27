@@ -92,7 +92,23 @@ export class ExtensionHost {
         list: () => { need("site:read"); return host.deps.versions(); },
         rollbackTo: (vid) => { need("site:patch"); const r = host.deps.rollbackTo(vid); host.audit.log("ext:" + id, "versions.rollbackTo", { id: vid, ok: r.ok }); return r; },
       },
-      media: { list: () => { need("media:read"); return host.deps.mediaStore.list(); } },
+      media: {
+        list: () => { need("media:read"); return host.deps.mediaStore.list(); },
+        // Save a Buffer / base64 string / data URL to the site's media library → { id, url, type }.
+        save: (data, meta = {}) => {
+          need("media:write");
+          let buf, type = meta.type;
+          if (Buffer.isBuffer(data)) buf = data;
+          else if (typeof data === "string") {
+            const m = data.match(/^data:([^;]+);base64,(.*)$/);
+            if (m) { type = type || m[1]; buf = Buffer.from(m[2], "base64"); }
+            else buf = Buffer.from(data, "base64");
+          } else throw new Error("media.save expects a Buffer, base64 string, or data URL");
+          const rec = host.deps.mediaStore.save(buf, { name: meta.name, type });
+          host.audit.log("ext:" + id, "media.save", { url: rec.url, type: rec.type });
+          return rec;
+        },
+      },
       // End-user accounts (members) — for memberships, portals, and payments.
       accounts: {
         list: () => { need("accounts:read"); return host.deps.accounts.list(); },

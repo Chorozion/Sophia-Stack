@@ -1,0 +1,12 @@
+{
+  "id": "sophia-image-gen",
+  "name": "Image Studio",
+  "version": "0.1.0",
+  "publisher": "SophiaXT Tech",
+  "description": "Generate images for your site with OpenAI, fal.ai, or Google Imagen — context-aware prompts that fit what you're building. Saves to your media library and can drop straight into a block.",
+  "entry": "./extension.js",
+  "permissions": ["site:read", "site:patch", "media:read", "media:write", "settings:read", "settings:write", "ai:use"],
+  "routes": ["/api/extensions/sophia-image-gen/*"],
+  "adminNav": [{ "label": "Image Studio", "path": "/admin/extensions/images", "icon": "image" }],
+  "requires": { "sophiaStack": ">=1.5.0" }
+}

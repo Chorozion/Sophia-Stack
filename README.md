@@ -172,9 +172,10 @@ sophia create-extension my-tool   # scaffolds a working extension (own tab, rout
 ```
 
 Then publish it to a public git repo and anyone installs it in one click. Start with
-**[Build your first extension](docs/extensions/build-your-first.md)**, the working
-[`hello-extension`](examples/extensions/hello-extension), and
-**[docs/extensions/overview.md](docs/extensions/overview.md)**. PRs that add your extension to the
+**[Build your first extension](docs/extensions/build-your-first.md)** and the working examples:
+[`hello-extension`](examples/extensions/hello-extension) and
+[`sophia-image-gen`](examples/extensions/sophia-image-gen) (**Image Studio** — provider-agnostic AI
+image generation with context-aware prompts, OpenAI/fal/Imagen). PRs that add your extension to the
 community list are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Safety & security
