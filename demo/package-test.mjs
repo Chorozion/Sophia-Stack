@@ -10,7 +10,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const tmp = mkdtempSync(join(tmpdir(), "sophia-pkg-"));
 cpSync(join(root, "package"), tmp, { recursive: true });   // NO node_modules copied
 
-const port = 3987, base = `http://localhost:${port}`;
+const port = 3987, base = `http://127.0.0.1:${port}`; // 127.0.0.1, not localhost (Node 18 fetch -> ::1)
 const child = spawn(process.execPath, ["app.js"], { cwd: tmp, env: { ...process.env, PORT: String(port) }, stdio: "ignore" });
 
 let up = false;

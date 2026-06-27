@@ -1016,8 +1016,10 @@ ${CORE_FOOTER}
       const addr = server.address();
       const actual = addr && typeof addr === "object" ? addr.port : port; // socket -> path
       resolve({
-        url: `http://localhost:${actual}/`,
-        dashboardUrl: `http://localhost:${actual}/dashboard`,
+        // 127.0.0.1 (not "localhost") so fetch() reaches the IPv4 bind on Node 18,
+        // where "localhost" resolves to ::1 first and would ECONNREFUSED.
+        url: `http://127.0.0.1:${actual}/`,
+        dashboardUrl: `http://127.0.0.1:${actual}/dashboard`,
         getModel: () => model, getCss: () => css, getTokens: () => tokens, getHost: () => extHost,
         close: () => { clearInterval(refresh); server.close(); },
         port: actual,
