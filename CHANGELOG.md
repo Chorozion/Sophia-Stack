@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Extension hooks + jobs (R3/R4)**: core now fires `page.beforeSave`, `site.beforePublish`,
+  `site.afterPublish`, and `seo.audit.requested` on edits; extensions can register **and run** jobs
+  (`ctx.jobs.run`, owner `POST /api/sophia/jobs`). Completes the Sophia SEO Suite's R1–R5 enablers.
+- **Sponsorship**: GitHub `Sponsor` button (`.github/FUNDING.yml`) + a README "Support the project"
+  section (Buy Me a Coffee + GitHub Sponsors).
 - **Extension admin panels (R5)**: an extension can `ctx.admin.registerPanel({label, path})` and serve
   HTML at that route; the Stack renders it as **its own dashboard tab** (iframed). So the Sophia SEO
   Suite gets its own self-contained panel once installed. Surfaced in `GET /api/sophia/extensions`.

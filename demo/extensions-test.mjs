@@ -21,7 +21,7 @@ const root = fileURLToPath(new URL("./out/_ext-test", import.meta.url));
 rmSync(root, { recursive: true, force: true });
 const extDir = root + "/extensions";
 mkdirSync(extDir + "/demo-ext", { recursive: true });
-writeFileSync(extDir + "/demo-ext/extension.json", JSON.stringify({ id: "demo-ext", name: "Demo", version: "0.1.0", entry: "./extension.js", permissions: ["site:read", "site:patch", "ai:use"], adminNav: [{ label: "Demo", path: "/admin/x", icon: "box" }], hooks: ["page.afterSave"] }));
+writeFileSync(extDir + "/demo-ext/extension.json", JSON.stringify({ id: "demo-ext", name: "Demo", version: "0.1.0", entry: "./extension.js", permissions: ["site:read", "site:patch", "ai:use", "jobs:run"], adminNav: [{ label: "Demo", path: "/admin/x", icon: "box" }], hooks: ["page.afterSave", "seo.audit.requested"] }));
 writeFileSync(extDir + "/demo-ext/extension.js", [
   "export default { async activate(ctx){",
   "  ctx.admin.registerNav({label:'Demo',path:'/admin/x',icon:'box'});",
@@ -30,6 +30,8 @@ writeFileSync(extDir + "/demo-ext/extension.js", [
   "  ctx.routes.register('/ping', async (req,res,h)=> h.send(res,200,{ok:true,site:ctx.site.read().site}));",
   "  ctx.routes.register('/stamp', async (req,res,h)=>{ const r=ctx.site.patch([{op:'mset',path:'brief',value:'by demo-ext'}]); ctx.audit.log('stamp',{ok:r.ok}); h.send(res,200,r); });",
   "  ctx.hooks.on('page.afterSave',(p)=> ctx.audit.log('saw:page.afterSave',(p&&p.changed)||null));",
+  "  ctx.hooks.on('seo.audit.requested',(p)=> ctx.audit.log('saw:seo.audit.requested',(p&&p.reason)||null));",
+  "  ctx.jobs.register('audit', async ()=>{ ctx.audit.log('job:audit-ran',null); return {scanned:true}; });",
   "} };",
 ].join("\n"));
 mkdirSync(extDir + "/no-perm-ext", { recursive: true });
@@ -67,7 +69,14 @@ ok((await S("GET", "/api/sophia/model")).body.brief === "by demo-ext", "the exte
 
 // 7. hook dispatch -> audited
 await S("POST", "/api/sophia/patch", { ops: [{ op: "set", id: "hero", path: "headline", value: "hooked" }] });
-ok((await S("GET", "/api/sophia/audit")).body.entries.some((e) => e.action === "saw:page.afterSave"), "hook dispatched to extension (and audited)");
+const aud7 = (await S("GET", "/api/sophia/audit")).body;
+ok(aud7.entries.some((e) => e.action === "saw:page.afterSave"), "hook dispatched to extension (and audited)");
+// 7b. R3: core fires seo.audit.requested on a content change
+ok(aud7.entries.some((e) => e.action === "saw:seo.audit.requested"), "core fires seo.audit.requested on a patch (R3)");
+// 7c. R4: an owner can run a registered extension job
+const job = await S("POST", "/api/sophia/jobs", { id: "demo-ext", name: "audit" });
+ok(job.body.ok && job.body.result && job.body.result.scanned === true, "owner can execute a registered extension job (R4)");
+ok((await S("GET", "/api/sophia/audit")).body.entries.some((e) => e.action === "job:audit-ran"), "the job actually ran (audited)");
 
 // 8. disabled extension cannot run
 await S("POST", "/api/sophia/extensions", { id: "demo-ext", enabled: false });

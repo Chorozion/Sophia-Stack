@@ -132,8 +132,21 @@ export class ExtensionHost {
         registerNav: (item) => { ext.nav = ext.nav || []; ext.nav.push(item); },
         registerPanel: (panel) => { ext.panels = ext.panels || []; ext.panels.push(panel); },
       },
-      jobs: { register: (name, fn) => { need("jobs:run"); ext.jobs = ext.jobs || {}; ext.jobs[name] = fn; } },
+      jobs: {
+        register: (name, fn) => { need("jobs:run"); ext.jobs = ext.jobs || {}; ext.jobs[name] = fn; },
+        run: (name, payload) => { need("jobs:run"); return host.runJob(id, name, payload); },
+      },
     };
+  }
+
+  // R4: execute a registered job by name (manually, via ctx.jobs.run, or an owner endpoint).
+  async runJob(id, name, payload) {
+    const ext = this.exts.get(id);
+    if (!ext || !ext.active || !ext.enabled) return { ok: false, error: "extension not active" };
+    const fn = ext.jobs && ext.jobs[name];
+    if (typeof fn !== "function") return { ok: false, error: "no such job: " + name };
+    try { const result = await fn(payload || {}); this.audit.log("ext:" + id, "job.run", { name, ok: true }); return { ok: true, result: result ?? null }; }
+    catch (e) { this.audit.log("ext:" + id, "job.run", { name, ok: false, error: e.message }); return { ok: false, error: String(e.message || e) }; }
   }
 
   async loadDir(dir) {
@@ -218,7 +231,7 @@ export class ExtensionHost {
   }
 
   list() {
-    return [...this.exts.values()].map((e) => ({ id: e.manifest.id, name: e.manifest.name, version: e.manifest.version, description: e.manifest.description || "", enabled: e.enabled, active: e.active, error: e.error || null, permissions: e.manifest.permissions || [], nav: e.active ? (e.nav || []) : [], panels: e.active ? (e.panels || []) : [] }));
+    return [...this.exts.values()].map((e) => ({ id: e.manifest.id, name: e.manifest.name, version: e.manifest.version, description: e.manifest.description || "", enabled: e.enabled, active: e.active, error: e.error || null, permissions: e.manifest.permissions || [], nav: e.active ? (e.nav || []) : [], panels: e.active ? (e.panels || []) : [], jobs: e.active ? Object.keys(e.jobs || {}) : [] }));
   }
   adminNav() { const out = []; for (const e of this.exts.values()) if (e.active && e.enabled && e.nav) for (const n of e.nav) out.push({ ...n, ext: e.manifest.id }); return out; }
 }

@@ -451,6 +451,13 @@ ${CORE_FOOTER}
       if (r.ok) { await extHost.reload(extensionsDir); audit.log("owner", "extension.install", { id: r.id, source: r.source || null }); }
       return send(res, r.ok ? 200 : 400, r);
     }
+    // R4: run a registered extension job (owner-triggered).
+    if (m === "POST" && p === "/api/sophia/jobs") {
+      if (!isAdmin(req)) return send(res, 401, { error: "owner only" });
+      const b = JSON.parse((await readBody(req)) || "{}");
+      if (!b.id || !b.name) return send(res, 400, { error: "id and name required" });
+      return send(res, 200, await extHost.runJob(b.id, b.name, b.payload));
+    }
     if (m === "POST" && p === "/api/sophia/extensions/uninstall") {
       if (!isAdmin(req)) return send(res, 401, { error: "owner only" });
       const b = JSON.parse((await readBody(req)) || "{}");
@@ -859,8 +866,14 @@ ${CORE_FOOTER}
       if (!canEdit(req)) return send(res, 401, { error: "owner or key required" });
       try {
         const { ops, label } = JSON.parse((await readBody(req)) || "{}");
+        extHost.emit("page.beforeSave", { ops }); extHost.emit("site.beforePublish", { ops }); // R3: pre-save/publish
         const r = doPatch(ops, label);
-        if (r.ok) { extHost.emit("site.afterPatch", { ops, changed: r.changed }); extHost.emit("page.afterSave", { ops, changed: r.changed }); }
+        if (r.ok) {
+          extHost.emit("site.afterPatch", { ops, changed: r.changed });
+          extHost.emit("page.afterSave", { ops, changed: r.changed });
+          extHost.emit("site.afterPublish", { ops, changed: r.changed });           // R3: a push-to-live is a publish
+          extHost.emit("seo.audit.requested", { reason: "content-changed", changed: r.changed }); // R3: content changed → re-audit
+        }
         return send(res, r.ok ? 200 : (r.code || 400), r);
       } catch (e) { return send(res, 400, { error: String(e.message || e) }); }
     }

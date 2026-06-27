@@ -186,6 +186,14 @@ PRs welcome. Read **[CONTRIBUTING.md](CONTRIBUTING.md)** and **[CLAUDE.md](CLAUD
 for AI-assisted contributors — Claude Code is one supported workflow; the standards apply to any tool).
 Be kind: **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)**.
 
+## Support the project
+
+Sophia Stack is free and open-source. If it's useful to you, you can support ongoing development:
+
+<a href="https://www.buymeacoffee.com/chorozion"><img src="https://img.shields.io/badge/Buy%20me%20a%20coffee-FFDD00?logo=buymeacoffee&logoColor=black" alt="Buy me a coffee"></a> · **[Sponsor on GitHub](https://github.com/sponsors/Chorozion)** · ⭐ Star the repo
+
+Every bit helps keep this independent and lock-in-free. Thank you. 🙏
+
 ## License
 
 [Apache-2.0](LICENSE) © SophiaXT Tech.
