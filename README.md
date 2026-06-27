@@ -50,11 +50,16 @@ builder is that you run and update it yourself.*
 ## See it in action
 
 **Describe it → watch it build live → Push to Live.** The split-screen builder: chat on the left, a
-real-time preview (VEX) on the right that updates as the AI edits — no reload, fully reversible.
+real-time preview (VEX) on the right that updates as the AI edits — no reload, fully reversible. Here
+it's building *The Library of The Untold* and generating a real **Seedream 4.5** hero image as it goes:
 
-<p align="center"><a href="docs/screenshots/04-build-chat.png"><img src="docs/screenshots/04-build-chat.png" width="860" alt="The live builder: chat + live preview"></a></p>
+<p align="center"><a href="docs/screenshots/12-builder-untold.png"><img src="docs/screenshots/12-builder-untold.png" width="860" alt="The split-screen builder developing a site, generating an AI image"></a></p>
 
-**…and the result — versatile sites you own**, all built by chatting (no code):
+**…and the live result** — atmospheric, cohesive, with an AI-generated hero, built entirely by chatting:
+
+<p align="center"><a href="docs/screenshots/13-untold-live.png"><img src="docs/screenshots/13-untold-live.png" width="560" alt="The Library of The Untold — finished live site"></a></p>
+
+**The same builder makes anything you own** (no code):
 
 | A local coffee shop | A SaaS product |
 |---|---|
@@ -161,6 +166,11 @@ the core. They register admin nav, settings, API routes, and hook listeners; use
 **provider-agnostic** AI service; and edit the site **only** through the validated, rollback-safe patch
 pipeline (never by mutating the model directly). Every capability is gated by a **scoped permission**,
 and every action is **audited**.
+
+One-click installs from a public git repo, each running as its own dashboard tab — here **Image Studio**
+and the **Sophia SEO Suite** installed and active:
+
+<p align="center"><a href="docs/screenshots/15-extensions.png"><img src="docs/screenshots/15-extensions.png" width="760" alt="Extensions tab — one-click install, multiple active extensions"></a></p>
 
 - **Manifest + lifecycle** — `extension.json` + an entry module with `activate`/`deactivate`.
 - **Scoped permissions** — `site:patch`, `pages:read`, `ai:use`, `settings:write`, … (13 total).
