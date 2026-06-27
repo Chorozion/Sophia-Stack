@@ -132,6 +132,27 @@ sophia template create local-service-business   # seeds ./.sophia-data
 
 See **[templates/](templates/)** and **[docs/platform/templates.md](docs/platform/templates.md)**.
 
+## Extensions & plugins
+
+Sophia Stack supports optional **extensions** — installable modules that add features without forking
+the core. They register admin nav, settings, API routes, and hook listeners; use the
+**provider-agnostic** AI service; and edit the site **only** through the validated, rollback-safe patch
+pipeline (never by mutating the model directly). Every capability is gated by a **scoped permission**,
+and every action is **audited**.
+
+- **Manifest + lifecycle** — `extension.json` + an entry module with `activate`/`deactivate`.
+- **Scoped permissions** — `site:patch`, `pages:read`, `ai:use`, `settings:write`, … (13 total).
+- **Hooks** — `site.afterPatch`, `page.afterSave`, `media.afterUpload`, `seo.audit.requested`, ….
+- **Admin nav + API routes** — extensions expose nav items and `/api/extensions/<id>/*` endpoints.
+
+> **Sophia SEO Suite** (SEO audits, metadata, schema markup, sitemaps, internal links, local SEO, …)
+> is being developed as a **separate, optional extension/plugin** for Sophia Stack — **not** part of
+> the base runtime. A contract stub lives at
+> [`examples/extensions/sophia-seo-suite-stub`](examples/extensions/sophia-seo-suite-stub).
+
+Start from the working [`hello-extension`](examples/extensions/hello-extension) example, and read
+**[docs/extensions/overview.md](docs/extensions/overview.md)**.
+
 ## Safety & security
 
 Every edit is **validated before it commits** (bad edits rejected), with **version history +

@@ -1,0 +1,13 @@
+{
+  "id": "hello-extension",
+  "name": "Hello Extension",
+  "version": "0.1.0",
+  "publisher": "SophiaXT Tech",
+  "description": "A minimal, working example: admin nav, a setting, two API routes (read + safe patch), a hook listener, provider-agnostic AI usage, and audit logging.",
+  "entry": "./extension.js",
+  "permissions": ["site:read", "site:patch", "settings:read", "settings:write", "ai:use"],
+  "routes": ["/api/extensions/hello-extension/*"],
+  "adminNav": [{ "label": "Hello", "path": "/admin/extensions/hello", "icon": "smile" }],
+  "hooks": ["page.afterSave"],
+  "requires": { "sophiaStack": ">=1.0.0" }
+}

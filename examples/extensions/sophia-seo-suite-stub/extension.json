@@ -1,0 +1,17 @@
+{
+  "id": "sophia-seo-suite",
+  "name": "Sophia SEO Suite (stub)",
+  "version": "0.1.0",
+  "publisher": "SophiaXT Tech",
+  "description": "STUB ONLY. Proves how the Sophia SEO Suite integrates with Sophia Stack as an extension (nav, settings, API route, safe patch, AI usage, audit, hooks). The full SEO Suite is developed as a separate product/repo — this does NOT implement SEO.",
+  "entry": "./extension.js",
+  "adminEntry": "./admin/index.js",
+  "permissions": [
+    "site:read", "site:patch", "pages:read", "pages:patch",
+    "media:read", "settings:read", "settings:write", "ai:use", "jobs:run"
+  ],
+  "routes": ["/api/extensions/sophia-seo-suite/*"],
+  "adminNav": [{ "label": "SEO Suite", "path": "/admin/extensions/seo", "icon": "search" }],
+  "hooks": ["page.afterSave", "site.afterPatch", "media.afterUpload", "seo.audit.requested"],
+  "requires": { "sophiaStack": ">=1.0.0" }
+}

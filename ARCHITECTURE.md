@@ -83,3 +83,22 @@ The stack **ships** its own operating manual for AI:
 
 ## Non-goals (still)
 Visual builder, plugin marketplace, edge/SSR multi-region — after the full-stack spine is solid.
+
+---
+
+## Provider-agnostic AI + Extensions (v1)
+
+**Provider-agnostic AI (`src/providers.mjs`).** The built-in builder never calls a vendor
+directly. Typed adapters — `openai` (every OpenAI-compatible host + local Ollama/LM Studio/vLLM +
+custom), `anthropic`, `gemini` — normalize to one internal message/tool shape. Config comes from the
+dashboard or environment variables (`.env.example`); `resolveProvider()` selects the active one.
+Extensions get the same service via `ctx.ai.*`.
+
+**Extension/plugin system (`src/extensions.mjs`).** Optional installable modules (manifest +
+`activate`/`deactivate`) extend the platform without forking it. They register admin nav, settings,
+API routes (`/api/extensions/<id>/*`), and hook listeners; every capability is gated by a scoped
+permission; every action is recorded by the **audit log (`src/audit.mjs`)**. Crucially, extensions
+touch the site **only** through the same `doPatch` pipeline as external agents — validate-before-commit,
+version snapshot, rollback — so they can never corrupt the model. The **Sophia SEO Suite** is the
+first major extension and is developed separately against
+`docs/extensions/sophia-seo-suite-contract.md`.

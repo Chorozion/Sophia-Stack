@@ -19,22 +19,32 @@ This roadmap is intentionally honest. Anything not marked ✅ is **not** in the 
 - **App features** — declarative data collections + auto CRUD, media hosting, sandboxed
   (`vm`) server functions, multi-page sites, auto sitemap/robots/llms.txt.
 
-## 🚧 In progress
+## ✅ Shipped (since v1)
 
-- **Templates gallery** — reusable starter apps (`templates/`) + `sophia template` commands.
-- **`sophia` CLI** — `init · dev · doctor · build · package · template · deploy · backup · restore`.
-- **CI/CD** — GitHub Actions for test/build/package/security.
+- **Provider-agnostic AI** — adapter layer (OpenAI-compatible, Anthropic, Gemini, local
+  Ollama/LM Studio/vLLM, custom); env + dashboard config; `sophia ai:*` commands.
+- **Extensions / plugins** — manifest + lifecycle, 13 scoped permissions, hook bus, routes,
+  admin-nav, settings, **safe-patch-only** site access, and audit logging. Example + SEO-suite stub.
+- **Audit logging** — append-only log of writes + extension actions (`/api/sophia/audit`).
+- **Templates gallery** — 10 validated starter apps + `sophia template` commands.
+- **`sophia` CLI** — `init · dev · doctor · build · package · template · backup · restore · deploy · ai:*`.
+- **CI/CD** — GitHub Actions for test / build / package / security / release.
+
+## 🚧 In progress / next
+
+- **Sophia SEO Suite** — the first major extension (built in a separate repo against the
+  [extension contract](docs/extensions/sophia-seo-suite-contract.md)).
 
 ## 🔭 Planned
 
 - **Scoped API keys** — read-only / write / admin roles beyond the current editor+admin split.
-- **Audit logging** — append-only record of writes (who/when/what).
-- **Backup / export / import** — first-class data + model snapshots.
+- **Extension admin-panel rendering** (`adminEntry`) + **install/uninstall CLI** + background jobs.
+- **`ai.stream()` / `ai.embed()`** for the built-in builder and extensions.
+- **Backup export/import** beyond the current `sophia backup/restore`.
 - **Hardened sandbox** — optional `isolated-vm` backend for stricter function isolation.
 - **Per-function auth + rate limiting** for public `/api/fn/*` endpoints.
-- **Live preview pane** in the builder (watch edits land as you chat).
+- **Live preview pane** in the builder.
 - **Hosted "Sophia AI" option** — managed inference so non-technical users don't bring a key.
-- **Anthropic-native + more providers** in the built-in builder.
 - **Shipped Docker image** and one-click deploy buttons.
 
 Have a request? Open a [feature request](https://github.com/Chorozion/Sophia-Stack/issues/new/choose).

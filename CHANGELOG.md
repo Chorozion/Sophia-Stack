@@ -7,11 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Provider-agnostic AI layer** (`src/providers.mjs`): typed adapters for OpenAI-compatible,
+  Anthropic, and Gemini; local models (Ollama/LM Studio/vLLM) + custom endpoints; env-based config
+  (`.env.example`) and dashboard config; `sophia ai:list/doctor/test/set-default`.
+- **Extension / plugin system** (`src/extensions.mjs`): manifest + lifecycle, 13 scoped permissions,
+  hook bus, API-route + admin-nav + settings registration, **safe-patch-only** site access (through
+  validate-before-commit + rollback), and an example extension + Sophia SEO Suite contract stub.
+- **Audit logging** (`src/audit.mjs`, `GET /api/sophia/audit`): append-only record of writes +
+  extension actions.
 - `sophia` CLI (`bin/sophia.mjs`): `init`, `dev`, `doctor`, `build`, `package`,
-  `template list/create`, `deploy`, `backup`, `restore`.
-- Templates system (`templates/`) with starter apps.
-- Expanded documentation under `docs/` (deploy guides, AI-agent guides, platform + security).
-- GitHub Actions for test / build / package / security.
+  `template list/create`, `deploy`, `backup`, `restore`, plus `ai:*`.
+- Templates system (`templates/`) with 10 validated starter apps.
+- Expanded documentation under `docs/` (deploy, AI providers, AI agents, platform, security, extensions).
+- GitHub Actions for test / build / package / security / release.
 
 ## [1.0.0] - 2026-06-27
 

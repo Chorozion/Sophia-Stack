@@ -8,6 +8,7 @@
 import express from "express";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { ssr } from "../dist/ssr.mjs";
 import { applyPatch } from "./patch.mjs";
 import { pageHead } from "./styles.mjs";
@@ -21,6 +22,10 @@ import { MediaStore } from "./media-store.mjs";
 import { runFunction } from "./sandbox.mjs";
 import { dashboardPage } from "./dashboard.mjs";
 import { callProvider, resolveProvider, envProviders } from "./providers.mjs";
+import { ExtensionHost } from "./extensions.mjs";
+import { makeAudit } from "./audit.mjs";
+
+const STACK_VERSION = "1.0.0";
 
 const DEFAULT_CLIENT_JS = fileURLToPath(new URL("../public/client.js", import.meta.url));
 const DEFAULT_CATALOG = fileURLToPath(new URL("../catalog.json", import.meta.url));
@@ -247,6 +252,34 @@ export async function createServer(opts = {}) {
     return { ok: true, restored: true, remaining: store.history().length };
   }
 
+  // ── Extensions / plugins (optional, installable — e.g. the Sophia SEO Suite) ──
+  // Extensions touch the site ONLY through doPatch (validate + rollback), get
+  // provider-agnostic AI, and have every action audited. Trust model: extension
+  // code runs in-process — install only ones you trust; permissions scope what we hand them.
+  const audit = makeAudit(dir);
+  const extHost = new ExtensionHost({
+    stackVersion: STACK_VERSION,
+    getModel: () => model,
+    doPatch, doSetCss,
+    store, dataStore, mediaStore,
+    aiGenerate: async (opts) => {
+      const llm = resolveProvider(tokens.llm);
+      if (!llm) throw new Error("no AI provider configured");
+      const messages = Array.isArray(opts.messages) ? opts.messages
+        : [...(opts.system ? [{ role: "system", content: opts.system }] : []), { role: "user", content: String(opts.prompt || "") }];
+      const r = await callProvider({ ...llm, temperature: opts.temperature, maxTokens: opts.maxTokens }, messages, []);
+      return { text: r.content || "", provider: llm.type };
+    },
+    aiListProviders: () => Object.keys(envProviders()).concat(tokens.llm && tokens.llm.apiKey ? ["dashboard"] : []),
+    aiDefaultProvider: () => { const p = resolveProvider(tokens.llm); return p ? { type: p.type, model: p.model || null } : null; },
+    getExtSettings: (id) => (tokens.extSettings && tokens.extSettings[id]) || {},
+    setExtSettings: (id, key, val) => { tokens.extSettings = tokens.extSettings || {}; tokens.extSettings[id] = tokens.extSettings[id] || {}; tokens.extSettings[id][key] = val; store.saveTokens(tokens); },
+    getEnabled: () => tokens.extEnabled || {},
+    setEnabled: (id, on) => { tokens.extEnabled = tokens.extEnabled || {}; tokens.extEnabled[id] = on; store.saveTokens(tokens); },
+    audit,
+  });
+  const extensionsDir = opts.extensionsDir || process.env.SOPHIA_EXTENSIONS_DIR || join(dir, "extensions");
+
   const shell = (routePath = route) => {
     const title = model?.pages?.[routePath]?.title || model.site || "Sophia";
     const head = pageHead(model, routePath, css);
@@ -354,6 +387,27 @@ ${CORE_FOOTER}
 
     // ── App backend: CRUD over agent-defined collections ──
     // /api/data/:collection[/:id]. Access policy comes from the App Model:
+    // ── Extensions: installed plugins serve their own API under /api/extensions/<id>/* ──
+    if (p.startsWith("/api/extensions/")) {
+      const rest = p.slice("/api/extensions/".length);
+      const slash = rest.indexOf("/");
+      const id = slash === -1 ? rest : rest.slice(0, slash);
+      const subpath = slash === -1 ? "" : rest.slice(slash + 1);
+      const helpers = { send, readBody, origin: origin(req), isAdmin: isAdmin(req), canEdit: canEdit(req), hasToken: !!auth(req), audit };
+      if (await extHost.dispatchRoute(id, subpath, req, res, helpers)) return;
+      return send(res, 404, { error: "no such extension route" });
+    }
+    // ── Extension management (admin): list, enable/disable ──
+    if (p === "/api/sophia/extensions") {
+      if (!isAdmin(req)) return send(res, 401, { error: "owner only" });
+      if (m === "GET") return send(res, 200, { extensions: extHost.list(), nav: extHost.adminNav() });
+      if (m === "POST") { const b = JSON.parse((await readBody(req)) || "{}"); if (!b.id) return send(res, 400, { error: "id required" }); return send(res, 200, await extHost.setEnabled(b.id, b.enabled !== false)); }
+    }
+    if (m === "GET" && p === "/api/sophia/audit") {
+      if (!isAdmin(req)) return send(res, 401, { error: "owner only" });
+      return send(res, 200, { entries: audit.tail(Number(url.searchParams.get("n")) || 200) });
+    }
+
     // model.data.collections[col].access = { create: "public"|"token", read: "public"|"token" }.
     // Only declared collections are reachable. Update/delete always require a token.
     if (p.startsWith("/api/data/")) {
@@ -407,6 +461,7 @@ ${CORE_FOOTER}
         try {
           const buf = await readBodyBuffer(req);
           const rec = mediaStore.save(buf, { name: req.headers["x-filename"], type: req.headers["content-type"] });
+          extHost.emit("media.afterUpload", { id: rec.id, url: rec.url, type: rec.type });
           return send(res, 200, { ok: true, ...rec });
         } catch (e) { return send(res, 400, { error: String(e.message || e) }); }
       }
@@ -603,6 +658,7 @@ ${CORE_FOOTER}
       try {
         const { ops } = JSON.parse((await readBody(req)) || "{}");
         const r = doPatch(ops);
+        if (r.ok) { extHost.emit("site.afterPatch", { ops, changed: r.changed }); extHost.emit("page.afterSave", { ops, changed: r.changed }); }
         return send(res, r.ok ? 200 : (r.code || 400), r);
       } catch (e) { return send(res, 400, { error: String(e.message || e) }); }
     }
@@ -654,6 +710,8 @@ ${CORE_FOOTER}
     requestHandler(req, res).catch(() => { if (!res.headersSent) { res.writeHead(500); res.end("server error"); } });
   });
 
+  await extHost.loadDir(extensionsDir); // load installed extensions before serving
+
   return new Promise((resolve) => {
     const onListen = () => {
       const addr = server.address();
@@ -661,7 +719,7 @@ ${CORE_FOOTER}
       resolve({
         url: `http://localhost:${actual}/`,
         dashboardUrl: `http://localhost:${actual}/dashboard`,
-        getModel: () => model, getCss: () => css, getTokens: () => tokens,
+        getModel: () => model, getCss: () => css, getTokens: () => tokens, getHost: () => extHost,
         close: () => { clearInterval(refresh); server.close(); },
         port: actual,
       });
