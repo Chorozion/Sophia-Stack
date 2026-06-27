@@ -1,0 +1,10 @@
+{
+  "name": "Local Service Business",
+  "slug": "local-service-business",
+  "description": "A one-page site for a local service business (plumber, electrician, cleaner, etc.): hero, services, stats, a customer review, and a free-quote CTA.",
+  "category": "business",
+  "style": "soft",
+  "tags": ["business", "local", "service", "lead-gen"],
+  "screenshot": "screenshot.png",
+  "prompt": "Build a one-page site for a local <service> business: a nav, a hero with a kicker, headline, sub-line and a call-to-action, three service cards with real descriptions, headline stats (availability, years in business, rating), a customer review quote, and a final call to action to get a free quote."
+}

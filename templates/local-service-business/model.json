@@ -1,0 +1,26 @@
+{
+  "site": "Reliable Pipes Co.",
+  "style": "soft",
+  "pages": {
+    "/": {
+      "title": "Reliable Pipes Co. — Trusted Local Plumbers",
+      "blocks": [
+        { "id": "nav", "type": "nav", "brand": "Reliable Pipes Co.", "links": ["Services", "Why us", "Reviews", "Get a quote"] },
+        { "id": "hero", "type": "hero", "fx": ["reveal-up"], "kicker": "Licensed · Insured · Local", "headline": "Plumbing done right, the first time", "sub": "From a dripping tap to a burst main, Reliable Pipes Co. has kept homes across the county dry and running since 2009. Fast arrivals, upfront pricing, and a workmanship guarantee on every job.", "cta": { "label": "Get a free quote", "href": "#quote" } },
+        { "id": "services", "type": "features", "items": [
+          { "t": "Emergency repairs", "d": "Burst pipes, blocked drains, and overflowing toilets handled around the clock — a real plumber on your doorstep, often within the hour." },
+          { "t": "Boilers & water heaters", "d": "Installation, servicing, and repair of gas and electric systems, with a full safety check and a clear quote before any work begins." },
+          { "t": "Bathroom & kitchen fitting", "d": "Leak-free sinks, showers, and appliance hook-ups installed cleanly and tested on the spot, with the site left tidy when we leave." }
+        ] },
+        { "id": "stats", "type": "stats", "items": [
+          { "v": "24/7", "l": "Emergency callout" },
+          { "v": "15 yrs", "l": "Serving the county" },
+          { "v": "4.9★", "l": "From 600+ reviews" }
+        ] },
+        { "id": "review", "type": "quote", "text": "Our kitchen flooded at 11pm and Reliable Pipes had someone here within forty minutes. He fixed the leak, mopped up, and the bill was exactly what he quoted. I won't call anyone else.", "author": "— Maria D., homeowner in Oakridge" },
+        { "id": "cta", "type": "cta", "headline": "Got a leak, a blockage, or a project? Let's sort it.", "button": { "label": "Get a free quote", "href": "tel:+15551234567" } },
+        { "id": "foot", "type": "footer", "text": "© Reliable Pipes Co. · Licensed & insured · Call (555) 123-4567 · Mon–Sun, 24 hours" }
+      ]
+    }
+  }
+}

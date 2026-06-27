@@ -1,0 +1,37 @@
+{
+  "site": "Sharp & Co.",
+  "style": "editorial",
+  "data": {
+    "collections": {
+      "bookings": {
+        "fields": [{ "name": "name" }, { "name": "email" }, { "name": "date" }],
+        "access": { "create": "public", "read": "token" }
+      }
+    }
+  },
+  "pages": {
+    "/": {
+      "title": "Sharp & Co. — Master Barbers",
+      "blocks": [
+        { "id": "nav", "type": "nav", "brand": "Sharp & Co.", "links": ["Services", "How it works", "Book now"] },
+        { "id": "hero", "type": "hero", "fx": ["reveal-up"], "kicker": "Est. 2012 · Downtown", "headline": "A sharper cut, every single visit", "sub": "Sharp & Co. is a traditional barbershop for the modern gentleman — skin fades, hot-towel shaves, and beard work by barbers who actually listen. Walk out looking like the best version of yourself.", "cta": { "label": "Request a booking", "href": "#book" } },
+        { "id": "services", "type": "features", "items": [
+          { "t": "Signature haircut", "d": "A full consultation, precision cut, and styling finish tailored to your hair and your routine. $35 · about 45 minutes." },
+          { "t": "Hot-towel shave", "d": "A classic straight-razor shave with hot towels, pre-shave oil, and a soothing balm. $30 · about 40 minutes." },
+          { "t": "Beard sculpt & trim", "d": "Line-up, shape, and condition to keep your beard looking deliberate, not neglected. $20 · about 25 minutes." }
+        ] },
+        { "id": "steps", "type": "steps", "items": [
+          { "t": "1 · Choose your service", "d": "Pick the cut, shave, or beard work you want — each shows the price and how long it takes." },
+          { "t": "2 · Pick a time", "d": "Send your preferred date in the form below and we'll match you with the right barber." },
+          { "t": "3 · Confirm", "d": "We reply within a few hours to lock in your slot. No deposit, no fuss — just show up sharp." }
+        ] },
+        { "id": "book", "type": "html",
+          "html": "<section class=\"bk-wrap\" id=\"book\"><div class=\"bk-card\"><h2>Request a booking</h2><p>Tell us who you are and when you'd like to come in. We'll confirm by email.</p><form id=\"bk-form\" novalidate><label>Name<input id=\"bk-name\" name=\"name\" type=\"text\" autocomplete=\"name\" placeholder=\"Jordan Ellis\" required /></label><label>Email<input id=\"bk-email\" name=\"email\" type=\"email\" autocomplete=\"email\" placeholder=\"you@email.com\" required /></label><label>Preferred date<input id=\"bk-date\" name=\"date\" type=\"date\" required /></label><button id=\"bk-submit\" type=\"submit\">Request booking</button></form><p id=\"bk-msg\" class=\"bk-msg\" role=\"status\" aria-live=\"polite\"></p></div></section>",
+          "css": ".bk-wrap{display:flex;justify-content:center;padding:64px 20px}.bk-card{width:100%;max-width:520px;padding:40px;border:1px solid rgba(0,0,0,.12);border-radius:6px;background:#fff}.bk-card h2{margin:0 0 8px;font-size:1.7rem}.bk-card p{margin:0 0 24px;opacity:.75}.bk-card form{display:flex;flex-direction:column;gap:16px}.bk-card label{display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:.92rem}.bk-card input{padding:12px 14px;border:1px solid rgba(0,0,0,.2);border-radius:4px;font-size:1rem;font-weight:400;background:#fafafa}.bk-card button{margin-top:4px;padding:14px 22px;border:0;border-radius:4px;font-size:1rem;font-weight:600;cursor:pointer;background:#111;color:#fff}.bk-card button:disabled{opacity:.6;cursor:default}.bk-msg{margin:18px 0 0;min-height:1.2em;font-weight:600}.bk-msg.ok{color:#15803d}.bk-msg.err{color:#b91c1c}",
+          "js": "(function(){var f=document.getElementById('bk-form');if(!f)return;var nameEl=document.getElementById('bk-name');var emailEl=document.getElementById('bk-email');var dateEl=document.getElementById('bk-date');var btn=document.getElementById('bk-submit');var msg=document.getElementById('bk-msg');f.addEventListener('submit',function(e){e.preventDefault();var name=(nameEl.value||'').trim();var email=(emailEl.value||'').trim();var date=(dateEl.value||'').trim();msg.className='bk-msg';if(!name||!email||email.indexOf('@')<1||!date){msg.textContent='Please fill in your name, a valid email, and a date.';msg.className='bk-msg err';return;}btn.disabled=true;var orig=btn.textContent;btn.textContent='Sending…';fetch('/api/data/bookings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,email:email,date:date})}).then(function(r){if(!r.ok)throw new Error('bad status');return r.json();}).then(function(){f.reset();msg.textContent='Booking requested! We\\u2019ll email you to confirm your slot shortly.';msg.className='bk-msg ok';btn.textContent=orig;btn.disabled=false;}).catch(function(){msg.textContent='Something went wrong. Please try again.';msg.className='bk-msg err';btn.textContent=orig;btn.disabled=false;});});})();"
+        },
+        { "id": "foot", "type": "footer", "text": "© Sharp & Co. · 14 Market Street, Downtown · Tue–Sat 9–6 · (555) 987-6543" }
+      ]
+    }
+  }
+}

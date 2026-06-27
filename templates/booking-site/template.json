@@ -1,0 +1,10 @@
+{
+  "name": "Booking Site",
+  "slug": "booking-site",
+  "description": "A site for a service that takes bookings (barber, salon, studio): hero, services with prices, a how-it-works section, and a working booking-request form wired to the data API.",
+  "category": "business",
+  "style": "editorial",
+  "tags": ["business", "booking", "appointments", "data", "local"],
+  "screenshot": "screenshot.png",
+  "prompt": "Build a site for a <service> that takes bookings: a nav, a hero, a services section listing each service with its price in the description, a three-step 'how booking works' section, and a working booking-request form (name, email, preferred date) that POSTs to the bookings collection and confirms on success, plus a footer."
+}

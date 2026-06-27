@@ -1,0 +1,10 @@
+{
+  "name": "Lead Capture",
+  "slug": "lead-capture",
+  "description": "A focused lead-gen landing page for a free guide or webinar: a strong value-prop hero, three sign-up benefits, a working email-capture form wired to the data API, and a footer.",
+  "category": "marketing",
+  "style": "neon",
+  "tags": ["marketing", "lead-gen", "data", "email", "webinar"],
+  "screenshot": "screenshot.png",
+  "prompt": "Build a focused lead-capture landing page for a free <guide or webinar>: a hero with a strong value proposition and a call to action, three benefit cards explaining why to sign up, a working email-capture form that POSTs to the leads collection and shows a thank-you, and a footer."
+}
