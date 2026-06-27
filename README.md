@@ -59,6 +59,16 @@ builder is that you run and update it yourself.*
 
 <p align="center"><a href="docs/screenshots/06-built-page.png"><img src="docs/screenshots/06-built-page.png" width="520" alt="A page Sophia built"></a></p>
 
+**Guided onboarding · one-click extensions · an installed extension's own panel** (the SEO Suite):
+
+| Welcome wizard | One-click Extensions | The SEO Suite's own tab |
+|---|---|---|
+| [![Onboarding](docs/screenshots/07-dashboard-onboarding.png)](docs/screenshots/07-dashboard-onboarding.png) | [![Extensions](docs/screenshots/08-extensions-oneclick.png)](docs/screenshots/08-extensions-oneclick.png) | [![SEO panel](docs/screenshots/09-seo-panel.png)](docs/screenshots/09-seo-panel.png) |
+
+> Every release ships **green**: `npm test` runs **230+ checks across 21 suites** (provider adapters,
+> the safe-patch engine, extensions/panels/jobs, accounts, payments, SEO render, self-update rollback,
+> VEX preview, vector memory, one-click install). See [`demo/`](demo/).
+
 ## Quick start
 
 ```bash
@@ -190,7 +200,7 @@ Be kind: **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)**.
 
 Sophia Stack is free and open-source. If it's useful to you, you can support ongoing development:
 
-<a href="https://www.buymeacoffee.com/chorozion"><img src="https://img.shields.io/badge/Buy%20me%20a%20coffee-FFDD00?logo=buymeacoffee&logoColor=black" alt="Buy me a coffee"></a> · **[Sponsor on GitHub](https://github.com/sponsors/Chorozion)** · ⭐ Star the repo
+<a href="https://buymeacoffee.com/kregonisall"><img src="https://img.shields.io/badge/Buy%20me%20a%20coffee-FFDD00?logo=buymeacoffee&logoColor=black" alt="Buy me a coffee"></a> · **[Sponsor on GitHub](https://github.com/sponsors/Chorozion)** · ⭐ Star the repo
 
 Every bit helps keep this independent and lock-in-free. Thank you. 🙏
 

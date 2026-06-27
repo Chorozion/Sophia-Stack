@@ -154,19 +154,34 @@ a{color:#00D4FF}.hide{display:none}code{color:#FF6B35}</style></head>
     });
     function send(){
       var t=$('ask').value.trim(); if(!t){return}
-      var prev=$('vexprev').checked;
+      var prev=$('vexprev').checked; var NL=String.fromCharCode(10);
       thread.push({role:'user',content:t}); bubble('user',t); $('ask').value=''; $('go').disabled=true;
-      var think=document.createElement('div');think.style.cssText='margin:8px 40px 8px 0;padding:9px 12px;border-radius:10px;background:#0c1a28;border:1px solid rgba(0,212,255,.12);font-size:14px;color:#8fb6c8';think.textContent='Sophia is thinking…';$('thread').appendChild(think);$('thread').scrollTop=$('thread').scrollHeight;
-      api('POST','/api/sophia/agent',{messages:thread,preview:prev}).then(function(j){
-        $('go').disabled=false; if(think&&think.parentNode)think.parentNode.removeChild(think);
-        if(j&&j.error==='no_llm'){$('needkey').classList.remove('hide');bubble('sophia','I need an AI key first — add one in Settings.');return}
-        if(j&&typeof j.reply==='string'){
-          thread.push({role:'assistant',content:j.reply});
-          if(prev&&j.preview&&((j.preview.ops&&j.preview.ops.length)||typeof j.preview.css==='string')){bubble('sophia',j.reply,'↗ Previewing in VEX — Apply or Discard on the right');showPreview(j.preview)}
-          else{bubble('sophia',j.reply,(j.applied&&j.applied.length)?('✓ '+j.applied.length+' change(s) applied — see the preview →'):'')}
-        }
-        else{bubble('sophia',(j&&j.message)||'Something went wrong. Try again.')}
-      });
+      var d=document.createElement('div');d.style.cssText='margin:8px 40px 8px 0;padding:9px 12px;border-radius:10px;background:#0c1a28;border:1px solid rgba(0,212,255,.12);font-size:14px;line-height:1.5';
+      var lbl=document.createElement('div');lbl.style.cssText='font-size:11px;color:#7d93a8;margin-bottom:3px';lbl.textContent='Sophia is thinking…';
+      var bd=document.createElement('div');bd.style.whiteSpace='pre-wrap';
+      d.appendChild(lbl);d.appendChild(bd);$('thread').appendChild(d);$('thread').scrollTop=$('thread').scrollHeight;
+      var acc='',finished=false;
+      function fin(){$('go').disabled=false}
+      function ev(e){
+        if(e.type==='token'){lbl.textContent='Sophia';acc+=e.text;bd.textContent=acc;$('thread').scrollTop=$('thread').scrollHeight}
+        else if(e.type==='tool'){lbl.textContent='Sophia · '+(e.name==='apply_patch'?'editing your site…':(e.name==='set_css'?'styling…':(e.name==='read_model'?'reading your site…':'working…')))}
+        else if(e.type==='done'){finished=true;lbl.textContent='Sophia';if(!acc)bd.textContent=e.reply||'Done.';thread.push({role:'assistant',content:e.reply||acc||''});
+          if(prev&&e.preview&&((e.preview.ops&&e.preview.ops.length)||typeof e.preview.css==='string')){showPreview(e.preview);var n=document.createElement('div');n.style.cssText='margin-top:6px;font-size:12px;color:#5fd38a';n.textContent='↗ Previewing in VEX — Push to Live or Discard →';d.appendChild(n)}
+          else if(e.applied&&e.applied.length){var n2=document.createElement('div');n2.style.cssText='margin-top:6px;font-size:12px;color:#5fd38a';n2.textContent='✓ '+e.applied.length+' change(s) applied — live now';d.appendChild(n2)}
+          fin()}
+        else if(e.type==='error'){bd.textContent=e.message||'Something went wrong.';fin()}
+      }
+      fetch('/api/sophia/agent/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:thread,preview:prev})}).then(function(res){
+        if(res.status===400){return res.json().then(function(j){if(j&&j.error==='no_llm'){$('needkey').classList.remove('hide');bd.textContent='I need an AI key first — add one in Settings.'}else bd.textContent=(j&&j.message)||'Error.';fin()})}
+        if(!res.body||!res.body.getReader){return res.json().then(function(j){ev({type:'done',reply:(j&&j.reply)||'Done.',applied:(j&&j.applied)||[],preview:j&&j.preview})})}
+        var reader=res.body.getReader();var dec=new TextDecoder();var buf='';
+        function pump(){return reader.read().then(function(r){
+          if(r.done){if(!finished)fin();return}
+          buf+=dec.decode(r.value,{stream:true});var sep;
+          while((sep=buf.indexOf(NL+NL))>=0){var chunk=buf.slice(0,sep);buf=buf.slice(sep+2);var line='';chunk.split(NL).forEach(function(x){if(x.indexOf('data:')===0)line+=x.slice(5).trim()});if(!line)continue;var obj;try{obj=JSON.parse(line)}catch(err){continue}ev(obj)}
+          return pump()})}
+        return pump();
+      }).catch(function(){if(!finished){bd.textContent='Connection error. Try again.';fin()}});
     }
     $('go').onclick=send;
     $('ask').onkeydown=function(e){if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();send()}};

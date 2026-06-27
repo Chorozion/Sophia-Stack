@@ -44,6 +44,45 @@ export async function embed(cfg, inputs) {
   return (json.data || []).map((d) => d.embedding);
 }
 
+// Streaming chat for the Lovable-style live build. For OpenAI-compatible providers it
+// streams token deltas via onDelta(text) and assembles the full {content, tool_calls}.
+// Other providers fall back to a single non-streamed delta (still works, just not live).
+export async function callProviderStream(cfg, messages, tools, onDelta) {
+  const type = normType(cfg.type);
+  if (type !== "openai") { const msg = await callProvider(cfg, messages, tools); if (msg && msg.content && onDelta) onDelta(msg.content); return msg; }
+  const base = (cfg.baseURL || "https://api.openai.com/v1").replace(/\/$/, "");
+  const body = { model: cfg.model || "gpt-4o-mini", messages, stream: true, ...(tools && tools.length ? { tools, tool_choice: "auto" } : {}), ...(cfg.temperature != null ? { temperature: cfg.temperature } : {}) };
+  let res;
+  try { res = await fetch(base + "/chat/completions", { method: "POST", headers: { "Content-Type": "application/json", ...(cfg.apiKey ? { Authorization: "Bearer " + cfg.apiKey } : {}) }, body: JSON.stringify(body) }); }
+  catch (e) { const msg = await callProvider(cfg, messages, tools); if (msg && msg.content && onDelta) onDelta(msg.content); return msg; }
+  if (!res.ok || !res.body) { const msg = await callProvider(cfg, messages, tools); if (msg && msg.content && onDelta) onDelta(msg.content); return msg; }
+  const reader = res.body.getReader(), dec = new TextDecoder();
+  let buf = "", content = ""; const toolCalls = [];
+  while (true) {
+    const { done, value } = await reader.read(); if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let nl;
+    while ((nl = buf.indexOf("\n")) >= 0) {
+      const line = buf.slice(0, nl).trim(); buf = buf.slice(nl + 1);
+      if (!line.startsWith("data:")) continue;
+      const data = line.slice(5).trim();
+      if (!data || data === "[DONE]") continue;
+      let json; try { json = JSON.parse(data); } catch { continue; }
+      const delta = json.choices && json.choices[0] && json.choices[0].delta;
+      if (!delta) continue;
+      if (delta.content) { content += delta.content; if (onDelta) onDelta(delta.content); }
+      if (delta.tool_calls) for (const tc of delta.tool_calls) {
+        const i = tc.index || 0;
+        toolCalls[i] = toolCalls[i] || { id: tc.id, type: "function", function: { name: "", arguments: "" } };
+        if (tc.id) toolCalls[i].id = tc.id;
+        if (tc.function) { if (tc.function.name) toolCalls[i].function.name = tc.function.name; if (tc.function.arguments) toolCalls[i].function.arguments += tc.function.arguments; }
+      }
+    }
+  }
+  const tcs = toolCalls.filter(Boolean);
+  return { role: "assistant", content: content || null, ...(tcs.length ? { tool_calls: tcs } : {}) };
+}
+
 async function postJSON(url, headers, body, timeoutMs = 60000) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);

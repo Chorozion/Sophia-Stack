@@ -21,7 +21,7 @@ import { openapiSpec } from "./openapi.mjs";
 import { MediaStore } from "./media-store.mjs";
 import { runFunction } from "./sandbox.mjs";
 import { dashboardPage } from "./dashboard.mjs";
-import { callProvider, resolveProvider, envProviders, embed } from "./providers.mjs";
+import { callProvider, resolveProvider, envProviders, embed, callProviderStream } from "./providers.mjs";
 import { Memory, gatherSources } from "./memory.mjs";
 import { SKILL } from "./skill-text.mjs";
 import { installFromGit, uninstall as uninstallExt } from "./installer.mjs";
@@ -807,6 +807,47 @@ ${CORE_FOOTER}
         }
         return finish("I made several changes (hit the step limit). Tell me to continue if there's more.");
       } catch (e) { return send(res, 502, { error: "llm_unreachable", message: String(e.message || e) }); }
+    }
+
+    // ── Streaming build (Lovable-style): tokens + tool steps stream over SSE ──
+    if (m === "POST" && p === "/api/sophia/agent/stream") {
+      if (!isAdmin(req)) return send(res, 401, { error: "owner only" });
+      const llm = resolveProvider(tokens.llm);
+      if (!llm) return send(res, 400, { error: "no_llm", message: "Connect an AI provider in Settings." });
+      const body = JSON.parse((await readBody(req)) || "{}");
+      const history = (Array.isArray(body.messages) ? body.messages : []).filter((x) => x && (x.role === "user" || x.role === "assistant") && typeof x.content === "string").slice(-20);
+      if (!history.length) return send(res, 400, { error: "empty", message: "Tell Sophia what to build." });
+      let catalog; try { catalog = JSON.parse(readFileSync(catalogPath, "utf8")); } catch { catalog = { blocks: {}, styles: [] }; }
+      let memHint = "";
+      try { const lastUser = [...history].reverse().find((x) => x.role === "user"); if (lastUser && memory.ready) { const hits = await memory.retrieve(lastUser.content, 5); if (hits.length) memHint = "\n\nRelevant context from this project:\n" + hits.map((h) => "- [" + h.kind + "] " + h.text.slice(0, 160)).join("\n"); } } catch {}
+      const messages = [{ role: "system", content: agentSystemPrompt(catalog) + memHint }, ...history];
+      res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive", "X-Accel-Buffering": "no" });
+      const sse = (o) => res.write("data: " + JSON.stringify(o) + "\n\n");
+      const applied = [], preview = !!body.preview;
+      let previewModel = model, previewCss = null; const previewOps = [];
+      const stagePatch = (ops) => { const r = applyPatch(previewModel, ops || []); const v = validateModel(r.model); if (!v.ok) return { ok: false, code: 422, error: "edit rejected — would break the site", details: v.errors }; previewModel = r.model; previewOps.push(...(ops || [])); return { ok: true, changed: r.changed, preview: true }; };
+      try {
+        for (let step = 0; step < 10; step++) {
+          const msg = await callProviderStream(llm, messages, AGENT_TOOLS, (t) => sse({ type: "token", text: t }));
+          messages.push(msg);
+          const calls = msg.tool_calls || [];
+          if (!calls.length) { sse({ type: "done", reply: msg.content || "Done.", applied, ...(preview ? { preview: { ops: previewOps, css: previewCss } } : {}) }); return res.end(); }
+          for (const tc of calls) {
+            let args = {}; try { args = JSON.parse((tc.function && tc.function.arguments) || "{}"); } catch {}
+            const name = tc.function && tc.function.name;
+            sse({ type: "tool", name });
+            let result;
+            if (name === "read_model") result = JSON.stringify(preview ? previewModel : model);
+            else if (name === "read_catalog") result = readFileSync(catalogPath, "utf8");
+            else if (name === "apply_patch") { const r = preview ? stagePatch(args.ops || []) : doPatch(args.ops || []); if (r.ok && r.changed) applied.push(...r.changed); if (r.ok && !preview) { extHost.emit("site.afterPatch", { ops: args.ops, changed: r.changed }); extHost.emit("page.afterSave", { ops: args.ops, changed: r.changed }); extHost.emit("seo.audit.requested", { reason: "content-changed", changed: r.changed }); } result = JSON.stringify(r); }
+            else if (name === "set_css") { if (preview) { const s = sanitizeCss(args.css || ""); if (s.ok) { previewCss = s.css; result = JSON.stringify({ ok: true, preview: true }); } else result = JSON.stringify({ ok: false, error: "unsafe css" }); } else { const r = doSetCss(args.css || ""); if (r.ok) applied.push("css"); result = JSON.stringify(r); } }
+            else result = "unknown tool";
+            messages.push({ role: "tool", tool_call_id: tc.id, content: String(result).slice(0, 8000) });
+          }
+        }
+        sse({ type: "done", reply: "I made several changes (hit the step limit). Tell me to continue if there's more.", applied, ...(preview ? { preview: { ops: previewOps, css: previewCss } } : {}) }); res.end();
+      } catch (e) { sse({ type: "error", message: String(e.message || e) }); res.end(); }
+      return;
     }
 
     // ── Optional Google sign-in (Option A: owner brings their own OAuth app) ──

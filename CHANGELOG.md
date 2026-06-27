@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Streaming build chat (Lovable-style)**: the builder now streams the agent's reply **token-by-token**
+  with live "editing your site…/styling…" steps. `callProviderStream` (OpenAI-compatible SSE; graceful
+  fallback for others) + `POST /api/sophia/agent/stream` + a streaming dashboard consumer.
 - **Extension hooks + jobs (R3/R4)**: core now fires `page.beforeSave`, `site.beforePublish`,
   `site.afterPublish`, and `seo.audit.requested` on edits; extensions can register **and run** jobs
   (`ctx.jobs.run`, owner `POST /api/sophia/jobs`). Completes the Sophia SEO Suite's R1–R5 enablers.
