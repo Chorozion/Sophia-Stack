@@ -54,9 +54,11 @@ real-time preview (VEX) on the right that updates as the AI edits — no reload,
 
 <p align="center"><a href="docs/screenshots/04-build-chat.png"><img src="docs/screenshots/04-build-chat.png" width="860" alt="The live builder: chat + live preview"></a></p>
 
-**…and the result — a clean site you own**, built by chatting (no code):
+**…and the result — versatile sites you own**, all built by chatting (no code):
 
-<p align="center"><a href="docs/screenshots/01-landing.png"><img src="docs/screenshots/01-landing.png" width="640" alt="A site built with Sophia Stack"></a></p>
+| A local coffee shop | A SaaS product |
+|---|---|
+| [![Coffee site](docs/screenshots/01-landing.png)](docs/screenshots/01-landing.png) | [![SaaS site](docs/screenshots/06-built-page.png)](docs/screenshots/06-built-page.png) |
 
 **Guided onboarding · one-click extensions · an installed extension's own panel** (the SEO Suite):
 
@@ -64,9 +66,9 @@ real-time preview (VEX) on the right that updates as the AI edits — no reload,
 |---|---|---|
 | [![Onboarding](docs/screenshots/07-dashboard-onboarding.png)](docs/screenshots/07-dashboard-onboarding.png) | [![Extensions](docs/screenshots/08-extensions-oneclick.png)](docs/screenshots/08-extensions-oneclick.png) | [![SEO panel](docs/screenshots/09-seo-panel.png)](docs/screenshots/09-seo-panel.png) |
 
-| Settings — your AI key + your own Stripe | Connect external agents (token · MCP · OpenAPI) |
-|---|---|
-| [![Settings](docs/screenshots/05-settings.png)](docs/screenshots/05-settings.png) | [![Connect](docs/screenshots/03-connect.png)](docs/screenshots/03-connect.png) |
+| First-run setup | Settings — your AI key + Stripe | Connect external agents |
+|---|---|---|
+| [![Get started](docs/screenshots/02-get-started.png)](docs/screenshots/02-get-started.png) | [![Settings](docs/screenshots/05-settings.png)](docs/screenshots/05-settings.png) | [![Connect](docs/screenshots/03-connect.png)](docs/screenshots/03-connect.png) |
 
 > Every release ships **green**: `npm test` runs **235 checks across 22 suites** (provider adapters +
 > streaming, the safe-patch engine, extensions/panels/jobs, accounts, payments, SEO render, self-update

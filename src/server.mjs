@@ -99,13 +99,13 @@ async function callLLM(llm, messages) {
 }
 const send = (res, code, obj) => { res.writeHead(code, { "Content-Type": "application/json" }); res.end(JSON.stringify(obj)); };
 
-const AUTH_CSS = `*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:radial-gradient(120% 80% at 50% -10%,#0d2036,transparent),#0A1628;color:#e8f4f8;font-family:system-ui,sans-serif}
-.card{width:min(560px,92vw);background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.18);border-radius:18px;padding:32px;backdrop-filter:blur(10px)}
-h1{margin:0 0 6px;font-size:24px}p{color:#7d93a8;margin:0 0 20px;font-size:14px}
-input{width:100%;background:#0d1f30;border:1px solid rgba(0,212,255,.2);color:#fff;border-radius:10px;padding:13px;font-size:15px;margin-bottom:12px}
-button{width:100%;background:linear-gradient(120deg,#00D4FF,#0066FF);color:#04121a;border:0;border-radius:10px;padding:14px;font-weight:700;font-size:16px;cursor:pointer}
-.out{margin-top:18px;display:none}.code{background:#0c1a28;border:1px dashed #FF6B35;border-radius:10px;padding:14px;font-family:ui-monospace,monospace;font-size:14px;word-break:break-all;color:#ffd9c2}
-.err{color:#ff7676;font-size:13px;margin-top:8px}.link{display:block;text-align:center;margin-top:16px;color:#7d93a8;font-size:13px}.warn{color:#FF6B35;font-weight:600}`;
+const AUTH_CSS = `*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:radial-gradient(110% 60% at 50% -8%,#0d2036,transparent),#0a1626;color:#e6f0f5;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased}
+.card{width:min(420px,92vw);background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.09);border-radius:14px;padding:28px}
+h1{margin:0 0 6px;font-size:21px;font-weight:600}p{color:#8499a8;margin:0 0 18px;font-size:13.5px;line-height:1.5}
+input{width:100%;background:#0c1c2b;border:1px solid rgba(255,255,255,.1);color:#fff;border-radius:8px;padding:10px 12px;font-size:14px;margin-bottom:10px}input:focus{outline:0;border-color:rgba(0,194,224,.5)}
+button{width:100%;background:#00c2e0;color:#04212c;border:0;border-radius:8px;padding:11px;font-weight:600;font-size:14px;cursor:pointer;transition:.12s}button:hover{background:#1ccdec}
+.out{margin-top:18px;display:none}.code{background:#0c1a28;border:1px dashed #FF6B35;border-radius:9px;padding:13px;font-family:ui-monospace,monospace;font-size:14px;word-break:break-all;color:#ffd9c2;letter-spacing:.02em}
+.err{color:#ff7676;font-size:13px;margin-top:8px}.link{display:block;text-align:center;margin-top:14px;color:#7d93a8;font-size:13px}.warn{color:#FF6B35;font-weight:600}`;
 
 function setupPage(configured, googleOn) {
   const title = configured ? "Access your dashboard" : "Get started";
