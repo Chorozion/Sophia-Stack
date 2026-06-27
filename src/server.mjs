@@ -25,6 +25,7 @@ import { callProvider, resolveProvider, envProviders } from "./providers.mjs";
 import { ExtensionHost } from "./extensions.mjs";
 import { makeAudit } from "./audit.mjs";
 import { AccountStore } from "./accounts.mjs";
+import { resolvePayments, createCheckout, listProducts, createProduct, verifyWebhook } from "./payments.mjs";
 
 const STACK_VERSION = "1.0.0";
 
@@ -456,6 +457,63 @@ ${CORE_FOOTER}
         return send(res, 200, accounts.remove(p.slice("/api/accounts/".length)));
       }
       return send(res, 404, { error: "unknown accounts route" });
+    }
+
+    // ── Owner payments — the owner connects THEIR Stripe to sell to THEIR customers ──
+    if (p.startsWith("/api/payments")) {
+      const pay = () => resolvePayments(tokens.payments);
+      if (p === "/api/payments/config") {
+        if (!isAdmin(req)) return send(res, 401, { error: "owner only" });
+        if (m === "GET") { const c = pay(); return send(res, 200, { configured: !!c, publishableKey: (tokens.payments && tokens.payments.publishableKey) || (c && c.publishableKey) || "", currency: (c && c.currency) || "usd", fromEnv: !(tokens.payments && tokens.payments.secretKey) && !!c }); }
+        if (m === "PUT") {
+          const b = JSON.parse((await readBody(req)) || "{}");
+          tokens.payments = { ...(tokens.payments || {}) };
+          if (b.secretKey) tokens.payments.secretKey = b.secretKey;
+          if (b.webhookSecret) tokens.payments.webhookSecret = b.webhookSecret;
+          if (b.publishableKey !== undefined) tokens.payments.publishableKey = b.publishableKey;
+          if (b.currency) tokens.payments.currency = b.currency;
+          store.saveTokens(tokens);
+          audit.log("owner", "payments.config", { configured: !!pay() });
+          return send(res, 200, { ok: true, configured: !!pay() });
+        }
+      }
+      if (m === "GET" && p === "/api/payments/products") {
+        const c = pay(); if (!c) return send(res, 200, { products: [], configured: false });
+        try { return send(res, 200, { products: await listProducts(c), configured: true }); } catch (e) { return send(res, 502, { error: String(e.message || e) }); }
+      }
+      if (m === "POST" && p === "/api/payments/products") {
+        if (!isAdmin(req)) return send(res, 401, { error: "owner only" });
+        const c = pay(); if (!c) return send(res, 400, { error: "connect Stripe in Settings first" });
+        try { return send(res, 200, await createProduct(c, JSON.parse((await readBody(req)) || "{}"))); } catch (e) { return send(res, 502, { error: String(e.message || e) }); }
+      }
+      if (m === "POST" && p === "/api/payments/checkout") {
+        const c = pay(); if (!c) return send(res, 400, { error: "payments are not set up on this site" });
+        const b = JSON.parse((await readBody(req)) || "{}");
+        const u = currentUser(req);
+        try {
+          const r = await createCheckout(c, {
+            priceId: b.priceId, amount: b.amount, name: b.name, mode: b.mode, quantity: b.quantity, currency: c.currency,
+            successUrl: b.successUrl || origin(req) + "/?paid=1", cancelUrl: b.cancelUrl || origin(req) + "/?canceled=1",
+            customerEmail: u ? u.email : b.email, metadata: { ...(u ? { memberId: u.id } : {}), ...(b.metadata || {}) },
+          });
+          return send(res, 200, r);
+        } catch (e) { return send(res, 502, { error: String(e.message || e) }); }
+      }
+      if (m === "POST" && p === "/api/payments/webhook") {
+        const c = pay(); const raw = await readBody(req);
+        const v = verifyWebhook(raw, req.headers["stripe-signature"], c && c.webhookSecret);
+        if (!v.ok) { audit.log("stripe", "webhook.rejected", { error: v.error }); return send(res, 400, { error: v.error }); }
+        const ev = v.event, obj = (ev.data && ev.data.object) || {};
+        const memberId = obj.metadata && obj.metadata.memberId;
+        if (memberId && accounts.get(memberId)) {
+          if (ev.type === "checkout.session.completed") accounts.update(memberId, { meta: { stripeCustomerId: obj.customer || null, lastPayment: new Date().toISOString(), ...(obj.mode === "subscription" ? { plan: "active" } : {}) } });
+          if (ev.type === "customer.subscription.deleted") accounts.update(memberId, { meta: { plan: "canceled" } });
+        }
+        audit.log("stripe", "webhook." + ev.type, { id: ev.id, memberId: memberId || null });
+        extHost.emit("payments.event", { type: ev.type, object: obj });
+        return send(res, 200, { received: true });
+      }
+      return send(res, 404, { error: "unknown payments route" });
     }
 
     // model.data.collections[col].access = { create: "public"|"token", read: "public"|"token" }.

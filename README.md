@@ -166,11 +166,14 @@ recovery phrase, keep tokens private, and back up `.sophia-data`. The function s
 
 ## Documentation
 
+- **New / non-technical?** [No-code quickstart](docs/setup/quickstart-no-code.md) · [Set up with an AI assistant](docs/setup/setup-with-ai-assistant.md) · [FAQ](docs/setup/faq.md) · [Glossary](docs/setup/glossary.md)
 - **Start here:** [getting-started](docs/getting-started.md) · [installation](docs/installation.md)
 - **Deploy:** [Hostinger](docs/deploy/hostinger.md) · [Railway](docs/deploy/railway.md) · [Render](docs/deploy/render.md) · [VPS](docs/deploy/vps.md) · [Docker](docs/deploy/docker.md)
 - **AI providers:** [overview](docs/ai-providers/overview.md) and per-provider guides
 - **AI agents:** [REST](docs/ai-agents/rest.md) · [MCP](docs/ai-agents/mcp.md) · [OpenAPI](docs/ai-agents/openapi.md) · [Claude Code](docs/ai-agents/claude-code.md) · [Cursor](docs/ai-agents/cursor.md) · [ChatGPT Actions](docs/ai-agents/chatgpt-actions.md)
 - **Platform:** [site model](docs/platform/site-model.md) · [patch API](docs/platform/patch-api.md) · [data layer](docs/platform/data-layer.md) · [server functions](docs/platform/server-functions.md) · [themes](docs/platform/themes.md) · [templates](docs/platform/templates.md)
+- **Members & payments:** [accounts](docs/platform/accounts.md) · [Stripe (your own)](docs/payments/stripe.md)
+- **Extensions:** [overview](docs/extensions/overview.md) · [manifest](docs/extensions/manifest.md) · [permissions](docs/extensions/permissions.md) · [hooks](docs/extensions/hooks.md) · [safe patching](docs/extensions/safe-patching.md)
 - **Security:** [production checklist](docs/security/production-checklist.md) · [key management](docs/security/key-management.md) · [threat model](docs/security/threat-model.md)
 
 ## Roadmap

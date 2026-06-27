@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Owner payments / Stripe** (`src/payments.mjs`): the owner connects **their own** Stripe (Settings →
+  Payments or env) to sell products/subscriptions — Sophia takes no cut. Checkout sessions, product
+  creation, and **signature-verified webhooks** that stamp member `meta` (plan/customer). Processor-
+  agnostic adapter; secret key never leaves the server. `docs/payments/stripe.md`.
+- **Non-technical setup docs** (`docs/setup/`): no-code quickstart, a **paste-into-ChatGPT** setup
+  assistant, FAQ, and glossary — aimed at a 10–30 minute first setup.
 - **End-user accounts** (`src/accounts.mjs`): member signup/login/logout/me + password change, owner
   member listing, `scrypt`+salt+`timingSafeEqual`, per-email brute-force lockout, HttpOnly sessions.
   Exposed to extensions via `ctx.accounts` (`accounts:read`/`accounts:write`). Foundation for

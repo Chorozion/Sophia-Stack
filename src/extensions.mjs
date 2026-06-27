@@ -24,6 +24,7 @@ export const PERMISSIONS = [
 export const HOOKS = [
   "site.beforePublish", "site.afterPublish", "site.afterPatch",
   "page.beforeSave", "page.afterSave", "media.afterUpload", "seo.audit.requested",
+  "payments.event",
 ];
 
 export function validateManifest(m) {

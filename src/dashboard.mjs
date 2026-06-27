@@ -189,11 +189,18 @@ a{color:#00D4FF}.hide{display:none}code{color:#FF6B35}</style></head>
       +'<div class="card"><h2>Sign in with Google <span style="color:#7d93a8;font-size:12px">(optional)</span></h2><p>Set up your OWN Google OAuth app, paste the credentials here, and you can sign in with Google. Redirect URL: <code>'+esc(origin)+'auth/google/callback</code></p>'
       +'<label class="row" style="margin-bottom:8px"><input type="checkbox" id="oe" style="width:auto;margin:0"> Enable Google sign-in</label>'
       +'<div class="label">Client ID</div><input id="ocid"><div class="label">Client Secret</div><input id="ocs" placeholder="(leave blank to keep current)"><div class="label">Your Google email (only this account may sign in)</div><input id="oem">'
-      +'<div class="row"><button id="so">Save</button> <span class="ok" id="ook"></span></div></div>';
+      +'<div class="row"><button id="so">Save</button> <span class="ok" id="ook"></span></div></div>'
+      +'<div class="card"><h2>Payments &mdash; sell with your own Stripe <span style="color:#7d93a8;font-size:12px">(optional)</span></h2><p>Connect <b>your own</b> Stripe account to sell products or subscriptions to your customers &mdash; Sophia never takes a cut. Get keys at <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener">dashboard.stripe.com/apikeys</a> (use <b>test</b> keys first). For payment confirmations, add a Stripe webhook to <code>'+esc(origin)+'api/payments/webhook</code> and paste its signing secret.</p>'
+      +'<div class="label">Stripe secret key</div><input id="psk" placeholder="sk_… (leave blank to keep current)">'
+      +'<div class="label">Webhook signing secret</div><input id="pwh" placeholder="whsec_… (leave blank to keep current)">'
+      +'<div class="label">Publishable key (optional)</div><input id="ppk" placeholder="pk_…">'
+      +'<div class="row"><button id="sp">Save</button> <span class="ok" id="pok"></span></div></div>';
     api('GET','/api/sophia/brief').then(function(j){$('brief').value=j.brief||''});
     $('sb').onclick=function(){api('PUT','/api/sophia/brief',{brief:$('brief').value}).then(function(){$('bok').textContent='saved ✓';setTimeout(function(){$('bok').textContent=''},2000)})};
     api('GET','/api/sophia/oauth').then(function(j){$('oe').checked=!!j.enabled;$('ocid').value=j.clientId||'';$('oem').value=j.allowedEmail||''});
     $('so').onclick=function(){var b={enabled:$('oe').checked,provider:'google',clientId:$('ocid').value,allowedEmail:$('oem').value};if($('ocs').value)b.clientSecret=$('ocs').value;api('PUT','/api/sophia/oauth',b).then(function(){$('ook').textContent='saved ✓';setTimeout(function(){$('ook').textContent=''},2000)})};
+    api('GET','/api/payments/config').then(function(j){if(j.configured)$('pok').textContent='Stripe connected ✓';$('ppk').value=j.publishableKey||''});
+    $('sp').onclick=function(){var b={publishableKey:$('ppk').value};if($('psk').value)b.secretKey=$('psk').value;if($('pwh').value)b.webhookSecret=$('pwh').value;api('PUT','/api/payments/config',b).then(function(r){$('pok').textContent=r.configured?'Stripe connected ✓':'saved';$('psk').value='';$('pwh').value='';setTimeout(function(){if($('pok'))$('pok').textContent=r.configured?'Stripe connected ✓':''},2500)})};
     var llmType='openai';
     api('GET','/api/sophia/llm').then(function(j){$('lm').value=j.model||'';$('lb').value=j.baseURL||'';llmType=j.type||'openai';if(j.configured)$('lk').placeholder='(saved — leave blank to keep)';if(j.envProviders&&j.envProviders.length)$('lok').textContent='env providers: '+j.envProviders.join(', ')});
     $('sl').onclick=function(){var b={model:$('lm').value,baseURL:$('lb').value,type:llmType};if($('lk').value)b.apiKey=$('lk').value;api('PUT','/api/sophia/llm',b).then(function(){$('lok').textContent='saved ✓';$('lk').value='';setTimeout(function(){$('lok').textContent=''},2000)})};
