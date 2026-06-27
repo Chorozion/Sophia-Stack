@@ -18,6 +18,14 @@ export default {
       targetKeywords: { type: "string", default: "" },
     });
 
+    // R5: register an admin PANEL. The Stack renders it as its own tab in the
+    // dashboard, iframed from the route below — so the extension is self-contained.
+    ctx.admin.registerPanel({ label: "SEO Suite", path: "panel" });
+    ctx.routes.register("/panel", async (req, res) => {
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      res.end('<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:system-ui,Segoe UI,sans-serif;background:#0a1628;color:#e8f4f8;padding:24px;margin:0}h1{color:#00D4FF;margin:0 0 6px}.b{background:linear-gradient(120deg,#00D4FF,#0066FF);color:#04121a;border:0;border-radius:9px;padding:9px 16px;font-weight:700;cursor:pointer}pre{background:#0c1a28;border:1px solid rgba(0,212,255,.15);border-radius:10px;padding:14px;color:#9fd9ea;overflow:auto;margin-top:14px}</style></head><body><h1>Sophia SEO Suite</h1><p style="color:#9fc7d6">Stub panel. The full Suite renders its audit dashboard, metadata editor, and schema tools here &mdash; integrated with THIS site (reads the live model, reacts to new content and Stripe pages, writes safe patches).</p><button class="b" onclick="run()">Run SEO audit</button><pre id="o">Click &ldquo;Run SEO audit&rdquo;.</pre><script>async function run(){document.getElementById("o").textContent="Auditing\\u2026";try{var r=await fetch("/api/extensions/sophia-seo-suite/audit",{credentials:"same-origin"});document.getElementById("o").textContent=JSON.stringify(await r.json(),null,2)}catch(e){document.getElementById("o").textContent=String(e)}}</script></body></html>');
+    });
+
     // GET /api/extensions/sophia-seo-suite/audit
     // The real Suite would run technical SEO + metadata + schema + link checks.
     ctx.routes.register("/audit", async (req, res, h) => {

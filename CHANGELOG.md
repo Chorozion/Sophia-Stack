@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Extension admin panels (R5)**: an extension can `ctx.admin.registerPanel({label, path})` and serve
+  HTML at that route; the Stack renders it as **its own dashboard tab** (iframed). So the Sophia SEO
+  Suite gets its own self-contained panel once installed. Surfaced in `GET /api/sophia/extensions`.
+- **Docker / run-like-a-container** (no VPS): `Dockerfile` (multi-stage, tiny runtime), `docker-compose.yml`
+  (`docker compose up`), `.dockerignore`. Data persists in a `sophia-data` volume.
+- **Agent integration guide** (`docs/ai-agents/building-together.md`): how the site model, safe-patch
+  pipeline, accounts, payments, SEO, extensions, and VEX fit together — so any agent builds with
+  intention and avoids connection mistakes.
 - **One-click extension install from git** (`src/installer.mjs`): the dashboard's new **Extensions** tab
   installs an extension straight from a public GitHub repo — downloads the tarball, validates the
   manifest + `requires.sophiaStack`, and installs **non-destructively** (backs up + auto-rolls-back on

@@ -218,7 +218,7 @@ export class ExtensionHost {
   }
 
   list() {
-    return [...this.exts.values()].map((e) => ({ id: e.manifest.id, name: e.manifest.name, version: e.manifest.version, description: e.manifest.description || "", enabled: e.enabled, active: e.active, error: e.error || null, permissions: e.manifest.permissions || [], nav: e.active ? (e.nav || []) : [] }));
+    return [...this.exts.values()].map((e) => ({ id: e.manifest.id, name: e.manifest.name, version: e.manifest.version, description: e.manifest.description || "", enabled: e.enabled, active: e.active, error: e.error || null, permissions: e.manifest.permissions || [], nav: e.active ? (e.nav || []) : [], panels: e.active ? (e.panels || []) : [] }));
   }
   adminNav() { const out = []; for (const e of this.exts.values()) if (e.active && e.enabled && e.nav) for (const n of e.nav) out.push({ ...n, ext: e.manifest.id }); return out; }
 }

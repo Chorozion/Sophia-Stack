@@ -1,0 +1,10 @@
+node_modules
+.git
+.sophia-data
+.sophia-update
+package
+dist
+release
+demo/out
+*.log
+.env

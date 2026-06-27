@@ -25,6 +25,8 @@ writeFileSync(extDir + "/demo-ext/extension.json", JSON.stringify({ id: "demo-ex
 writeFileSync(extDir + "/demo-ext/extension.js", [
   "export default { async activate(ctx){",
   "  ctx.admin.registerNav({label:'Demo',path:'/admin/x',icon:'box'});",
+  "  ctx.admin.registerPanel({label:'Demo Panel',path:'panel'});",
+  "  ctx.routes.register('/panel', async (req,res)=>{ res.writeHead(200,{'Content-Type':'text/html'}); res.end('<h1>demo panel</h1>'); });",
   "  ctx.routes.register('/ping', async (req,res,h)=> h.send(res,200,{ok:true,site:ctx.site.read().site}));",
   "  ctx.routes.register('/stamp', async (req,res,h)=>{ const r=ctx.site.patch([{op:'mset',path:'brief',value:'by demo-ext'}]); ctx.audit.log('stamp',{ok:r.ok}); h.send(res,200,r); });",
   "  ctx.hooks.on('page.afterSave',(p)=> ctx.audit.log('saw:page.afterSave',(p&&p.changed)||null));",
@@ -51,6 +53,10 @@ ok(list.extensions.some((e) => e.id === "demo-ext" && e.active) && list.nav.some
 
 // 4. extension API route serves
 ok((await get("/api/extensions/demo-ext/ping")).body.ok, "extension API route serves");
+
+// 4b. R5: the extension registers an admin panel, and its panel route serves HTML
+ok(list.extensions.find((e) => e.id === "demo-ext").panels.some((p) => p.label === "Demo Panel" && p.path === "panel"), "extension registers an admin panel (surfaced in the list)");
+ok(/demo panel/.test(await (await fetch(base + "/api/extensions/demo-ext/panel")).text()), "the extension panel route renders its own HTML (own tab in the dashboard)");
 
 // 5. permission enforcement
 ok(/permission/.test((await get("/api/extensions/no-perm-ext/try-write")).body.error || ""), "extension without site:patch is DENIED");

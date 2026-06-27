@@ -1,0 +1,17 @@
+# One command to run Sophia Stack like a container — no VPS needed:
+#   docker compose up
+# Then open http://localhost:3000 and follow the onboarding wizard.
+services:
+  sophia:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      # Bring your own AI (optional — you can also set this in the dashboard):
+      # - OPENAI_API_KEY=sk-...
+    volumes:
+      - sophia-data:/app/.sophia-data   # your site, data, accounts, media, extensions
+    restart: unless-stopped
+volumes:
+  sophia-data:

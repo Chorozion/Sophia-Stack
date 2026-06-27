@@ -30,7 +30,15 @@ a{color:#00D4FF}.hide{display:none}code{color:#FF6B35}</style></head>
   var api=function(m,p,b){var o={method:m,headers:{}};if(b!==undefined){o.headers['Content-Type']='application/json';o.body=JSON.stringify(b)}return fetch(p,o).then(function(r){return r.json().catch(function(){return{}})})};
   var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
   var TABS=['Build','Connect','Pages','Data','Media','Keys','Extensions','Settings'];var cur='Build';
-  function renderTabs(){$('tabs').innerHTML=TABS.map(function(t){return '<div class="tab '+(t===cur?'on':'')+'" data-t="'+t+'">'+t+'</div>'}).join('');Array.prototype.forEach.call(document.querySelectorAll('.tab'),function(el){el.onclick=function(){cur=el.getAttribute('data-t');renderTabs();render()}})}
+  var extPanels=[]; // panels contributed by installed extensions: [{id,label,path}]
+  function renderTabs(){
+    var core=TABS.map(function(t){return '<div class="tab '+(t===cur?'on':'')+'" data-t="'+t+'">'+t+'</div>'}).join('');
+    var ext=extPanels.map(function(p){var key='ext:'+p.id+':'+p.path;return '<div class="tab '+(cur===key?'on':'')+'" data-t="'+esc(key)+'" title="'+esc(p.id)+'">'+esc(p.label)+'</div>'}).join('');
+    $('tabs').innerHTML=core+ext;
+    Array.prototype.forEach.call(document.querySelectorAll('.tab'),function(el){el.onclick=function(){cur=el.getAttribute('data-t');renderTabs();render()}});
+  }
+  function extPanel(P,key){var i=key.indexOf(':',4);var id=key.slice(4,i);var path=key.slice(i+1).replace(/^\\//,'');P.innerHTML='<div class="card" style="padding:8px"><iframe src="/api/extensions/'+esc(id)+'/'+esc(path)+'" style="width:100%;height:660px;border:1px solid rgba(0,212,255,.18);border-radius:10px;background:#0a1628"></iframe></div>'}
+  function loadExtPanels(){return api('GET','/api/sophia/extensions').then(function(j){var ps=[];((j&&j.extensions)||[]).forEach(function(e){if(e.active&&e.panels)e.panels.forEach(function(p){if(p&&p.path)ps.push({id:e.id,label:p.label||e.name,path:String(p.path).replace(/^\\//,'')})})});extPanels=ps;renderTabs()}).catch(function(){})}
   function goTab(t){cur=t;renderTabs();render();window.scrollTo(0,0)}
   function initOnboarding(){
     Promise.all([api('GET','/api/sophia/onboarding'),api('GET','/api/sophia/llm')]).then(function(r){
@@ -51,7 +59,7 @@ a{color:#00D4FF}.hide{display:none}code{color:#FF6B35}</style></head>
       $('obdone').onclick=finish;$('obskip').onclick=finish;
     });
   }
-  function render(){var P=$('panel');P.innerHTML='';if(cur==='Build')build(P);else if(cur==='Connect')connect(P);else if(cur==='Pages')pages(P);else if(cur==='Data')data(P);else if(cur==='Media')media(P);else if(cur==='Keys')keys(P);else if(cur==='Extensions')extensions(P);else settings(P)}
+  function render(){var P=$('panel');P.innerHTML='';if(cur.indexOf('ext:')===0){extPanel(P,cur);return}if(cur==='Build')build(P);else if(cur==='Connect')connect(P);else if(cur==='Pages')pages(P);else if(cur==='Data')data(P);else if(cur==='Media')media(P);else if(cur==='Keys')keys(P);else if(cur==='Extensions')extensions(P);else settings(P)}
   function extensions(P){
     P.innerHTML='<div class="card"><h2>Extensions</h2><p>Add features with one click &mdash; installed straight from a public git repo, non-destructively. Your site data is never touched.</p>'
       +'<div class="item" style="background:linear-gradient(120deg,rgba(0,212,255,.08),transparent)"><span><b>Sophia SEO Suite</b> <span style="color:#7d93a8;font-size:12px">SEO audits · metadata · schema · sitemaps</span></span><button id="addseo">Add</button></div>'
@@ -62,11 +70,11 @@ a{color:#00D4FF}.hide{display:none}code{color:#FF6B35}</style></head>
     function load(){api('GET','/api/sophia/extensions').then(function(j){var ex=(j&&j.extensions)||[];
       $('extlist').innerHTML=ex.length?ex.map(function(e){return '<div class="item"><span><b>'+esc(e.name)+'</b> <span style="color:#7d93a8;font-size:12px">v'+esc(e.version)+' &middot; '+(e.active?'<span style="color:#5fd38a">active</span>':'disabled')+(e.error?' &middot; <span style="color:#ff8a8a">'+esc(e.error)+'</span>':'')+'</span></span><span class="row"><button class="ghost" data-tog="'+esc(e.id)+'" data-on="'+(e.enabled?'1':'0')+'">'+(e.enabled?'Disable':'Enable')+'</button> <button class="danger" data-unin="'+esc(e.id)+'">Uninstall</button></span></div>'}).join(''):'<div style="color:#7d93a8;font-size:13px">No extensions installed yet.</div>';
       Array.prototype.forEach.call(document.querySelectorAll('[data-tog]'),function(b){b.onclick=function(){api('POST','/api/sophia/extensions',{id:b.getAttribute('data-tog'),enabled:b.getAttribute('data-on')!=='1'}).then(load)}});
-      Array.prototype.forEach.call(document.querySelectorAll('[data-unin]'),function(b){b.onclick=function(){if(!confirm('Uninstall '+b.getAttribute('data-unin')+'? Your site data is untouched.'))return;api('POST','/api/sophia/extensions/uninstall',{id:b.getAttribute('data-unin')}).then(load)}});
+      Array.prototype.forEach.call(document.querySelectorAll('[data-unin]'),function(b){b.onclick=function(){if(!confirm('Uninstall '+b.getAttribute('data-unin')+'? Your site data is untouched.'))return;api('POST','/api/sophia/extensions/uninstall',{id:b.getAttribute('data-unin')}).then(function(){load();loadExtPanels();if(cur.indexOf('ext:')===0){cur='Extensions';renderTabs();render()}})}});
     })}
     function install(repo,sub,btn){var old=btn.textContent;btn.disabled=true;btn.textContent='Installing…';$('gimsg').innerHTML='<span style="color:#9fc7d6">Pulling from git&hellip;</span>';
       api('POST','/api/sophia/extensions/install',{repo:repo,subdir:sub}).then(function(r){btn.disabled=false;btn.textContent=old;
-        if(r&&r.ok){$('gimsg').innerHTML='<span class="ok">Installed '+esc(r.name||r.id)+' v'+esc(r.version)+' &check;</span>';load()}
+        if(r&&r.ok){$('gimsg').innerHTML='<span class="ok">Installed '+esc(r.name||r.id)+' v'+esc(r.version)+' &check; &mdash; its panel is now in the top tabs.</span>';load();loadExtPanels()}
         else{$('gimsg').innerHTML='<span style="color:#ff8a8a">'+esc((r&&r.error)||'install failed')+'</span>'}
       })}
     $('addseo').onclick=function(){install('Chorozion/SophiaXT-SEO-Suite','extensions/sophia-stack',this)};
@@ -301,6 +309,6 @@ a{color:#00D4FF}.hide{display:none}code{color:#FF6B35}</style></head>
     Array.prototype.forEach.call(document.querySelectorAll('[data-use]'),function(b){b.onclick=function(){var p=PROVIDERS[+b.getAttribute('data-use')];$('lb').value=p[2];$('lm').value=p[3];llmType=p[5]||'openai';$('lk').focus()}});
   }
   $('logout').onclick=function(){fetch('/_logout',{method:'POST'}).then(function(){location.href='/_setup'})};
-  renderTabs();render();initOnboarding();
+  renderTabs();render();initOnboarding();loadExtPanels();
 </script></body></html>`;
 }
