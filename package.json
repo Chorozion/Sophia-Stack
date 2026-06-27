@@ -1,8 +1,7 @@
 {
   "name": "@sophiaxt/sophia-stack",
-  "version": "0.0.2",
-  "private": true,
-  "description": "AI-optimized full-stack deployment stack — build, connect, edit, and ship sites at minimal token cost with real-time edits and safe deploys.",
+  "version": "1.0.0",
+  "description": "Open-source, self-hosted AI app builder. Deploy to your own hosting, own your files and data, and let AI agents build and operate it via REST, MCP, and OpenAPI — Lovable/Base44-style building without SaaS lock-in.",
   "type": "module",
   "bin": {
     "sophia": "./bin/sophia.mjs"
@@ -14,7 +13,9 @@
     "dev": "node scripts/dev.mjs",
     "serve": "node scripts/serve.mjs",
     "package": "node scripts/package.mjs",
-    "test": "node demo/react-test.mjs && node demo/connections-test.mjs && node demo/server-test.mjs"
+    "doctor": "node bin/sophia.mjs doctor",
+    "test": "node demo/run-all.mjs",
+    "test:package": "node scripts/package.mjs && node demo/package-test.mjs"
   },
   "dependencies": {
     "express": "^5.2.1",
@@ -26,14 +27,28 @@
   },
   "keywords": [
     "ai",
-    "token-efficient",
-    "site-model",
-    "real-time",
-    "deploy",
+    "ai-app-builder",
+    "self-hosted",
+    "open-source",
+    "website-builder",
+    "mcp",
+    "openapi",
+    "ai-agents",
+    "lovable-alternative",
+    "base44-alternative",
+    "no-lock-in",
     "sophiaxt"
   ],
-  "author": "SOPHIA XT (sophia-2)",
-  "license": "UNLICENSED",
+  "author": "SophiaXT LLC",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/Chorozion/Sophia-Stack#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Chorozion/Sophia-Stack.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Chorozion/Sophia-Stack/issues"
+  },
   "engines": {
     "node": ">=18"
   }

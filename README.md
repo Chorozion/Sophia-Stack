@@ -2,102 +2,166 @@
 
 <h1 align="center">Sophia Stack</h1>
 
-<p align="center"><b>Your own website, built and edited by AI — you host it, you own it.</b></p>
+<p align="center"><b>An open-source, self-hosted AI app builder you actually own — works with any AI provider.</b></p>
+
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License"></a>
+  <img src="https://img.shields.io/badge/node-%3E%3D18-brightgreen" alt="Node >= 18">
+  <img src="https://img.shields.io/badge/AI-provider--agnostic-8A2BE2" alt="Provider agnostic">
+  <img src="https://img.shields.io/badge/agents-REST%20%C2%B7%20MCP%20%C2%B7%20OpenAPI-FF6B35" alt="Agent operable">
+</p>
 
 ---
 
-Sophia Stack is a complete website you deploy to your **own** commodity hosting as a single
-zip (zero `npm install`). After a one-time setup you build and edit it by **talking to an AI** —
-either the **built-in builder** (bring your own key) or **any external AI agent** you hand a token
-to. No platform lock-in, no monthly SaaS holding your site hostage. It's yours.
+**Sophia Stack** (from **SophiaXT Tech**) is an open-source, self-hosted AI app builder and
+**agent-operable** web/app platform. Deploy it to your own hosting, own your files and data, and
+build, edit, and operate your site by **chatting with your preferred AI** — or by handing **any AI
+agent** a token to drive it over **REST, MCP, or OpenAPI**.
 
-> Replit/Bolt/Lovable power — but **remote, contained, and owned**, on a host you control.
+It's Lovable/Base44/Bolt-style AI building, but **owned, self-hosted, and provider-agnostic** — no
+SaaS lock-in, no single-vendor dependency.
+
+> **Bring your own AI.** Works with **OpenAI, Anthropic (Claude), Google Gemini, OpenRouter, Groq,
+> Mistral, Together, Fireworks, Perplexity, Ollama, LM Studio, vLLM**, or any OpenAI-compatible /
+> custom endpoint. **Claude Code is supported, but not required** — it's one developer workflow
+> among many.
+
+## Why it exists
+
+Cloud AI builders are fast, but you're renting: your app lives on their servers, your data is theirs
+to gate, and you can't run it on your own infrastructure or your own models. Sophia Stack flips that —
+you get the AI-building experience **on hardware you control**, with **the AI provider you choose**
+(including local models), and a deployed site that any agent can operate through open interfaces.
+
+## How it compares
+
+| | Sophia Stack | Lovable / Base44 / Bolt / v0 | Replit Agent |
+|---|---|---|---|
+| Self-hosted, own the files | ✅ | ❌ (hosted SaaS) | ❌ |
+| Open source | ✅ Apache-2.0 | ❌ | ❌ |
+| Provider-agnostic (incl. local models) | ✅ | ❌ (their model) | ❌ |
+| Deployed site is agent-operable (REST/MCP/OpenAPI) | ✅ | ❌ | ❌ |
+| Bring your own API key / no vendor lock-in | ✅ | ❌ | ❌ |
+| Validate-before-commit + rollback + immutable core | ✅ | partial | partial |
+
+*This is a young open-source project — see the honest [ROADMAP](ROADMAP.md). The trade-off vs. a hosted
+builder is that you run and update it yourself.*
 
 ## Screenshots
 
 | Your branded site | Build by chatting with Sophia |
 |---|---|
 | [![Landing](docs/screenshots/01-landing.png)](docs/screenshots/01-landing.png) | [![Build chat](docs/screenshots/04-build-chat.png)](docs/screenshots/04-build-chat.png) |
-| **Connect any AI (token / MCP / OpenAPI)** | **Bring your own key — one-tap providers** |
+| **Connect any AI (token / MCP / OpenAPI)** | **Bring your own provider — one-tap presets** |
 | [![Connect](docs/screenshots/03-connect.png)](docs/screenshots/03-connect.png) | [![Settings](docs/screenshots/05-settings.png)](docs/screenshots/05-settings.png) |
 
-**…and a complete page it built from one prompt** ("build me a coffee shop landing page"):
+**…and a complete page built from one prompt** ("build me a coffee shop landing page"):
 
 <p align="center"><a href="docs/screenshots/06-built-page.png"><img src="docs/screenshots/06-built-page.png" width="520" alt="A page Sophia built"></a></p>
 
-## What it does
+## Quick start
 
-1. **Deploy** the zip to any Node host (Hostinger "Setup Node.js App", Railway, Render, a VPS).
-2. **Get started** — set an admin login; you get a **five-word recovery phrase** (shown once).
-3. **Build with AI** — two ways:
-   - **Built-in builder (chat):** add an AI key in Settings (OpenAI, DeepSeek, Groq, OpenRouter,
-     Together, Mistral — one-tap presets + "get a key" links). Then just chat in the dashboard.
-     A real **agent loop** reads your site, makes changes, fixes its own mistakes, and iterates.
-   - **Any external agent:** mint a `mykey-` token and hand any web-capable AI the **skill + URL +
-     token** — it edits the live site directly via the REST API or the built-in **MCP** server.
-4. **Own everything** — pages, custom HTML/CSS/JS, a data layer with auto CRUD, media hosting,
-   and sandboxed server functions, all on your domain.
+```bash
+git clone https://github.com/Chorozion/Sophia-Stack.git
+cd Sophia-Stack
+npm install
+npm run build          # SSR + client bundles + catalog
+npm test               # full suite
+node scripts/package.mjs   # -> package/ (the deployable artifact)
+node bin/sophia.mjs doctor # sanity check
+```
 
-## Why it's different
-
-- **You own it.** Self-hosted, single artifact, no platform lock-in. Cancel nothing — it's your files.
-- **Any AI can operate it.** The deployed site is itself an agent-operable endpoint: a token-gated
-  **REST API**, an **MCP server** (`/mcp`), and an **OpenAPI schema** (`/openapi.json`).
-- **Safe by design.** Every edit is **validated before it lands** (bad edits rejected), with
-  **version history + one-click rollback**, and an **immutable core + footer** the AI can't remove.
-- **A real app platform**, not a template: multi-page, custom code, database + forms, media, and
-  sandboxed backend functions.
-- **Ownership recovery.** Lost your password or someone got in? Your recovery phrase resets the
-  login and revokes every key + session — no support ticket, because there's no company in the middle.
-
-## Connect an external AI
-
-- **ChatGPT:** see **[docs/Connect-ChatGPT.md](docs/Connect-ChatGPT.md)** — build a Custom GPT Action
-  from `/openapi.json` (Bearer = your `mykey-` token).
-- **Claude / MCP clients:** add `/mcp` as a custom connector with a Bearer token.
-- **Cursor / Cline / Claude Code:** hand it the skill + URL + token; it edits via the API directly.
-
-> A plain chat with **no web tool** (e.g. the Grok app) can *read* your site but can't *send* the
-> request — that's the app's limit, not the token. The token is full auth wherever the AI can make calls.
-
-## What the AI can and cannot do
-
-**CAN:** edit pages, write custom HTML/CSS/JS, define data + forms (CRUD), upload media, write
-sandboxed backend functions, use blocks/styles/effects, roll back.
-**CANNOT:** touch the framework core or remove the footer/branding · read your password, recovery
-phrase, or keys · reach the host OS/filesystem/network (backend code runs in a locked-down sandbox) ·
-run code outside that sandbox. Full details in **[SECURITY.md](SECURITY.md)**.
+Then **deploy** (below), open the URL, click **Get started**, save your 5-word recovery phrase, and
+either chat with the built-in builder (add a provider key in **Settings**) or hand an external AI a
+token. Full walkthrough: **[docs/getting-started.md](docs/getting-started.md)**.
 
 ## Deploy from the prebuilt zip
 
-Grab **`release/sophia-stack.zip`** (or build it — below), upload to your host, set the start file to
-`app.js` (Node 18+), start it, open the URL. Full step-by-step in the zip's `README.txt`.
+Grab **`release/sophia-stack.zip`** (or build it above), upload to your host, set the start file to
+`app.js` (Node 18+), start it, open the URL. It boots with **zero `npm install`** and honors
+`process.env.PORT` (numeric TCP or a Unix socket on Passenger/Hostinger).
 
-## Build from source
+Guides: **[Hostinger](docs/deploy/hostinger.md) · [Railway](docs/deploy/railway.md) ·
+[Render](docs/deploy/render.md) · [VPS](docs/deploy/vps.md) · [Docker](docs/deploy/docker.md)**
+
+## Bring your own AI provider
+
+The built-in builder is **provider-agnostic**. Configure it in **Settings** (one-tap presets +
+"get a key" links) **or** via environment variables (see [`.env.example`](.env.example)):
+
+| Provider | Type | Notes |
+|---|---|---|
+| OpenAI / DeepSeek / Groq / OpenRouter / Mistral / Together / Fireworks / Perplexity | `openai` | any OpenAI-compatible API |
+| Anthropic (Claude) | `anthropic` | native Messages API |
+| Google Gemini | `gemini` | native generateContent |
+| Ollama / LM Studio / vLLM | `openai` | **local models, no key needed** |
+| Any custom OpenAI-compatible endpoint | `openai` | set a base URL |
 
 ```bash
-npm install
-npm run build       # SSR + client bundles
-npm test            # full suite (run the demo/*.mjs)
-node scripts/package.mjs   # -> package/  (the deployable artifact)
+sophia ai:list      # providers detected from your env
+sophia ai:doctor    # what's configured
+sophia ai:test      # send a tiny prompt to the active provider
 ```
 
-## Repo map
+Details: **[docs/ai-providers/overview.md](docs/ai-providers/overview.md)**.
 
-| Path | What |
-|---|---|
-| `src/` | server · agent loop · store · data · media · sandbox · blocks · styles · effects · dashboard |
-| `scripts/` | build · package · catalog |
-| `mcp/` | zero-dep stdio MCP wrapper |
-| `demo/` | the test suite (server, agent, dashboard, recovery, mcp, pages, pro, ui, package…) |
-| `docs/` | Connect-ChatGPT guide |
-| `brand/` | logo |
-| `ARCHITECTURE.md` · `SECURITY.md` | design + safety model |
+## Operate it with an external AI agent
 
-## Status — v1
+A deployed Sophia site is **agent-operable**. Mint a `mykey-` token in the dashboard and hand it to
+any agent that can call HTTP — it edits the live site directly:
 
-Deployable, branded, and tested end to end: onboarding + recovery, the conversational agent builder,
-the agent-operable REST/MCP/OpenAPI surface, data + media + sandboxed functions, validate-before-commit
-+ rollback + immutable core. Runs as a CommonJS Express app for broad host compatibility.
+- **REST** — `GET /api/sophia/catalog|model|ping`, `POST /api/sophia/patch`, `PUT /api/sophia/css`,
+  `POST /api/sophia/rollback`. → [docs/ai-agents/rest.md](docs/ai-agents/rest.md)
+- **MCP** — remote `/mcp` endpoint + a stdio wrapper. → [docs/ai-agents/mcp.md](docs/ai-agents/mcp.md)
+- **OpenAPI** — `GET /openapi.json` for a ChatGPT Custom GPT Action. →
+  [docs/ai-agents/chatgpt-actions.md](docs/ai-agents/chatgpt-actions.md)
+- **Claude Code / Cursor / Cline** — hand it the skill + URL + token. →
+  [Claude Code](docs/ai-agents/claude-code.md) · [Cursor](docs/ai-agents/cursor.md)
 
-*Built under SophiaXT, operator-directed.*
+> Claude Code is **one recommended developer workflow**. Sophia Stack itself can be operated by **any**
+> compatible AI agent or API client — it's MCP/OpenAPI/REST ready.
+
+## Templates
+
+Start from a real app instead of a blank page:
+
+```bash
+sophia template list
+sophia template create local-service-business   # seeds ./.sophia-data
+```
+
+See **[templates/](templates/)** and **[docs/platform/templates.md](docs/platform/templates.md)**.
+
+## Safety & security
+
+Every edit is **validated before it commits** (bad edits rejected), with **version history +
+one-click rollback** and an **immutable core + footer** the AI can't remove. Server functions run in
+a `vm` sandbox with no `require/process/fs/network`. Login + recovery are rate-limited.
+
+⚠️ **You are running a live, write-capable app.** Use HTTPS, a strong admin password, save your
+recovery phrase, keep tokens private, and back up `.sophia-data`. The function sandbox is
+"good-enough" containment, **not** a hardened multi-tenant boundary. Read
+**[SECURITY.md](SECURITY.md)** and the [production checklist](docs/security/production-checklist.md).
+
+## Documentation
+
+- **Start here:** [getting-started](docs/getting-started.md) · [installation](docs/installation.md)
+- **Deploy:** [Hostinger](docs/deploy/hostinger.md) · [Railway](docs/deploy/railway.md) · [Render](docs/deploy/render.md) · [VPS](docs/deploy/vps.md) · [Docker](docs/deploy/docker.md)
+- **AI providers:** [overview](docs/ai-providers/overview.md) and per-provider guides
+- **AI agents:** [REST](docs/ai-agents/rest.md) · [MCP](docs/ai-agents/mcp.md) · [OpenAPI](docs/ai-agents/openapi.md) · [Claude Code](docs/ai-agents/claude-code.md) · [Cursor](docs/ai-agents/cursor.md) · [ChatGPT Actions](docs/ai-agents/chatgpt-actions.md)
+- **Platform:** [site model](docs/platform/site-model.md) · [patch API](docs/platform/patch-api.md) · [data layer](docs/platform/data-layer.md) · [server functions](docs/platform/server-functions.md) · [themes](docs/platform/themes.md) · [templates](docs/platform/templates.md)
+- **Security:** [production checklist](docs/security/production-checklist.md) · [key management](docs/security/key-management.md) · [threat model](docs/security/threat-model.md)
+
+## Roadmap
+
+See **[ROADMAP.md](ROADMAP.md)** — shipped vs. in-progress vs. planned, kept honest.
+
+## Contributing
+
+PRs welcome. Read **[CONTRIBUTING.md](CONTRIBUTING.md)** and **[CLAUDE.md](CLAUDE.md)** (the repo guide
+for AI-assisted contributors — Claude Code is one supported workflow; the standards apply to any tool).
+Be kind: **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)**.
+
+## License
+
+[Apache-2.0](LICENSE) © SophiaXT Tech.

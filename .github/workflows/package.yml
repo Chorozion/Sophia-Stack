@@ -1,0 +1,32 @@
+name: package
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: node scripts/package.mjs
+      - name: Validate the artifact boots with no node_modules
+        run: |
+          test -f package/app.js
+          test -f package/package.json
+          PORT=8088 node package/app.js & APP=$!
+          sleep 3
+          curl -fsS http://127.0.0.1:8088/ > /dev/null && echo "artifact boots + serves OK"
+          curl -fsS http://127.0.0.1:8088/api/sophia/catalog > /dev/null && echo "catalog served OK"
+          kill $APP
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sophia-stack-package
+          path: package/

@@ -12,7 +12,7 @@
 The **Sophia Stack** is an **AI-optimized, full-stack deployment stack**: a robust toolchain
 where an AI agent builds, edits, connects to backends, and ships real production sites at
 **minimal token cost**, with **real-time edits** and **safe one-command deploys**. It runs
-many different sites and ships with **its own Markdown docs + Claude Code skills** so agents
+many different sites and ships with **its own Markdown docs, an agent skill, and MCP/OpenAPI/REST interfaces** so agents
 operate it natively.
 
 ## Proven core (v0, done — 6/6 tests green)
@@ -56,7 +56,7 @@ The stack **ships** its own operating manual for AI:
 
 - **Reference MD** — the Site Model schema, block vocabulary, data-binding + connection syntax,
   patch ops, server actions, deploy flow.
-- **Claude Code skill(s)** — a `sophia-stack` skill (SKILL.md + helpers) that teaches an agent
+- **Agent skill (provider-agnostic)** — a `sophia-stack` skill (SKILL.md, served at /skill.md) that teaches any agent
   the verb set (`read` / `patch` / `connect` / `preview` / `deploy`) so any Sophia agent builds
   on the stack natively, token-efficiently. This is a first-class deliverable, not an afterthought.
 

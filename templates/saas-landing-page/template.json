@@ -1,0 +1,10 @@
+{
+  "name": "SaaS Landing Page",
+  "slug": "saas-landing-page",
+  "description": "A polished SaaS marketing page: hero, logos, features, stats, pricing, testimonial, and CTA.",
+  "category": "marketing",
+  "style": "dark-tech",
+  "tags": ["saas", "marketing", "pricing", "landing"],
+  "screenshot": "screenshot.png",
+  "prompt": "Build a SaaS landing page for <product>: a hero with a value prop, a logo strip, three feature cards, headline stats, a three-tier pricing table, a customer quote, and a final call to action."
+}

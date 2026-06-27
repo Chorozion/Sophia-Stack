@@ -20,6 +20,7 @@ import { openapiSpec } from "./openapi.mjs";
 import { MediaStore } from "./media-store.mjs";
 import { runFunction } from "./sandbox.mjs";
 import { dashboardPage } from "./dashboard.mjs";
+import { callProvider, resolveProvider, envProviders } from "./providers.mjs";
 
 const DEFAULT_CLIENT_JS = fileURLToPath(new URL("../public/client.js", import.meta.url));
 const DEFAULT_CATALOG = fileURLToPath(new URL("../catalog.json", import.meta.url));
@@ -76,12 +77,10 @@ const AGENT_TOOLS = [
   { type: "function", function: { name: "apply_patch", description: "Apply patch ops to the live site. Returns ok + changed, or ok:false + validation errors to fix.", parameters: { type: "object", properties: { ops: { type: "array", items: { type: "object" } } }, required: ["ops"] } } },
   { type: "function", function: { name: "set_css", description: "Replace the live custom CSS layer.", parameters: { type: "object", properties: { css: { type: "string" } }, required: ["css"] } } },
 ];
+// Provider-agnostic: dispatches to the configured adapter (openai-compatible,
+// anthropic, gemini, local, custom). See src/providers.mjs.
 async function callLLM(llm, messages) {
-  const url = (llm.baseURL || "https://api.openai.com/v1").replace(/\/+$/, "") + "/chat/completions";
-  const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + llm.apiKey }, body: JSON.stringify({ model: llm.model || "gpt-4o-mini", temperature: 0.3, messages, tools: AGENT_TOOLS }) });
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error((j.error && j.error.message) || ("AI error " + r.status));
-  return j.choices && j.choices[0] && j.choices[0].message;
+  return callProvider(llm, messages, AGENT_TOOLS);
 }
 const send = (res, code, obj) => { res.writeHead(code, { "Content-Type": "application/json" }); res.end(JSON.stringify(obj)); };
 
@@ -493,14 +492,17 @@ ${CORE_FOOTER}
     if (m === "GET" && p === "/api/sophia/llm") {
       if (!isAdmin(req)) return send(res, 401, { error: "owner only" });
       const l = tokens.llm || {};
-      return send(res, 200, { configured: !!l.apiKey, provider: l.provider || "openai", baseURL: l.baseURL || "https://api.openai.com/v1", model: l.model || "gpt-4o-mini" });
+      // env-detected providers (names only — never expose keys)
+      const envFound = Object.keys(envProviders());
+      return send(res, 200, { configured: !!resolveProvider(tokens.llm), type: l.type || "openai", provider: l.provider || "openai", baseURL: l.baseURL || "https://api.openai.com/v1", model: l.model || "gpt-4o-mini", envProviders: envFound });
     }
     if (m === "PUT" && p === "/api/sophia/llm") {
       if (!isAdmin(req)) return send(res, 401, { error: "owner only" });
       const b = JSON.parse((await readBody(req)) || "{}");
       const prev = tokens.llm || {};
       tokens.llm = {
-        provider: String(b.provider || prev.provider || "openai").slice(0, 40),
+        type: String(b.type || prev.type || "openai").trim().slice(0, 40),       // openai | anthropic | gemini
+        provider: String(b.provider || prev.provider || "openai").slice(0, 40),  // display label
         baseURL: String(b.baseURL || prev.baseURL || "https://api.openai.com/v1").trim().slice(0, 300),
         model: String(b.model || prev.model || "gpt-4o-mini").trim().slice(0, 100),
         apiKey: b.apiKey ? String(b.apiKey).trim().slice(0, 300) : prev.apiKey || "",
@@ -512,8 +514,8 @@ ${CORE_FOOTER}
     // tools on the AI's behalf until the task is done, self-correcting on errors.
     if (m === "POST" && p === "/api/sophia/agent") {
       if (!isAdmin(req)) return send(res, 401, { error: "owner only" });
-      const llm = tokens.llm || {};
-      if (!llm.apiKey) return send(res, 400, { error: "no_llm", message: "Add your AI key in Settings first." });
+      const llm = resolveProvider(tokens.llm); // dashboard key OR env provider OR local endpoint
+      if (!llm) return send(res, 400, { error: "no_llm", message: "Connect an AI provider in Settings (or set a provider env var)." });
       const body = JSON.parse((await readBody(req)) || "{}");
       const history = (Array.isArray(body.messages) ? body.messages : []).filter((x) => x && (x.role === "user" || x.role === "assistant") && typeof x.content === "string").slice(-20);
       if (!history.length) return send(res, 400, { error: "empty", message: "Tell Sophia what to build." });

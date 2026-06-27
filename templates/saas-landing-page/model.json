@@ -1,0 +1,32 @@
+{
+  "site": "Nimbus",
+  "style": "dark-tech",
+  "pages": {
+    "/": {
+      "title": "Nimbus — Ship faster",
+      "blocks": [
+        { "id": "nav", "type": "nav", "brand": "Nimbus", "links": ["Features", "Pricing", "Docs", "Sign in"] },
+        { "id": "hero", "type": "hero", "fx": ["reveal-up"], "kicker": "New · v2 is here", "headline": "Ship your product, not your infrastructure", "sub": "Nimbus gives your team a production-ready backend in minutes — auth, data, and deploys, all in one place.", "cta": { "label": "Start free", "href": "#pricing" } },
+        { "id": "logos", "type": "logos", "heading": "Trusted by teams at", "items": ["Northwind", "Acme", "Globex", "Initech", "Umbrella"] },
+        { "id": "features", "type": "features", "items": [
+          { "t": "Instant backend", "d": "Auth, database, and APIs provisioned automatically — no setup." },
+          { "t": "Deploy on push", "d": "Every commit ships to a global edge with zero config." },
+          { "t": "Scales with you", "d": "From your first user to your millionth, no re-architecting." }
+        ] },
+        { "id": "stats", "type": "stats", "items": [
+          { "v": "99.99%", "l": "Uptime SLA" },
+          { "v": "<50ms", "l": "Median latency" },
+          { "v": "12k+", "l": "Teams building" }
+        ] },
+        { "id": "pricing", "type": "pricing", "tiers": [
+          { "name": "Hobby", "price": "$0", "features": ["1 project", "Community support", "1GB storage"], "cta": { "label": "Get started", "href": "#" } },
+          { "name": "Pro", "price": "$29/mo", "features": ["Unlimited projects", "Priority support", "100GB storage", "Daily backups"], "cta": { "label": "Start free trial", "href": "#" } },
+          { "name": "Enterprise", "price": "Custom", "features": ["SSO + audit logs", "Dedicated support", "SLA + on-prem"], "cta": { "label": "Contact sales", "href": "#" } }
+        ] },
+        { "id": "quote", "type": "quote", "text": "We replaced three services with Nimbus and shipped our launch two weeks early.", "author": "— Priya N., CTO at Northwind" },
+        { "id": "cta", "type": "cta", "headline": "Start building today — free, no card required.", "button": { "label": "Create your account", "href": "#" } },
+        { "id": "foot", "type": "footer", "text": "© Nimbus, Inc. · Privacy · Terms · status.nimbus.dev" }
+      ]
+    }
+  }
+}

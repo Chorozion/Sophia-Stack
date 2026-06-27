@@ -1,0 +1,33 @@
+name: security
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 7 * * 1"
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Dependency audit (high+)
+        run: npm audit --audit-level=high || true
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Basic secret scan
+        run: |
+          echo "Scanning tracked files for obvious secrets..."
+          if git grep -nIE 'sk-[A-Za-z0-9]{20}|mykey-[A-Za-z0-9_-]{16}|BEGIN (RSA|OPENSSH|EC|PRIVATE) (PRIVATE )?KEY|xox[baprs]-[0-9A-Za-z-]+' -- . ':(exclude)docs/**' ':(exclude)*.md'; then
+            echo "::error::Possible secret detected in tracked files"; exit 1
+          fi
+          echo "No obvious secrets found."

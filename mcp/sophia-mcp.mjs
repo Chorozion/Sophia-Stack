@@ -4,7 +4,7 @@
 // This is the handshake. Point your agent at this with two env vars and it gets
 // a full toolset to read the catalog and build/edit the live site — no glue.
 //
-// Claude Code / Desktop MCP config (e.g. .mcp.json):
+// MCP client config (any MCP client — e.g. Claude Desktop, Cursor, or a custom host):
 //   {
 //     "mcpServers": {
 //       "sophia": {

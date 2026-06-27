@@ -19,3 +19,6 @@ demo/out/
 dist-zip/
 !release/
 !release/*.zip
+
+# local env (never commit real keys)
+.env
