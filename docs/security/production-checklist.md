@@ -47,7 +47,7 @@ do-it checklist.
 - [ ] **Lock down data collections.** Set each collection's `access` policy
       deliberately — `"public"` only where you truly want open create/read.
       Update and delete always require a token. See the
-      [Data Layer](./data-layer.md).
+      [Data Layer](../platform/data-layer.md).
 
 ## Runtime hardening
 
@@ -70,7 +70,7 @@ do-it checklist.
       radius and the immutable core can't be bricked, but review edits before
       trusting them on a production site.
 
-- [ ] **Understand the sandbox caveat.** [Server functions](./server-functions.md)
+- [ ] **Understand the sandbox caveat.** [Server functions](../platform/server-functions.md)
       run in a Node `vm` sandbox (no `require`/`fs`/network, 1.5s timeout). This
       is **"good enough" containment, not a hardened multi-tenant isolate**, and
       `/api/fn/<name>` endpoints are **public** (no built-in auth/rate-limit).

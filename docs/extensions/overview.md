@@ -9,6 +9,11 @@ The reference implementation lives in [`src/extensions.mjs`](../../src/extension
 The starter example is [`examples/extensions/hello-extension`](../../examples/extensions/hello-extension) —
 copy it to begin.
 
+> **New to building extensions? Start with the 15-minute tutorial → [Build your first extension](build-your-first.md).**
+> Then: [manifest](manifest.md) · [lifecycle](lifecycle.md) · [permissions](permissions.md) ·
+> [hooks](hooks.md) · [API routes](api-routes.md) · [admin UI / panels](admin-ui.md) ·
+> [safe patching](safe-patching.md) · [worked example](example-extension.md).
+
 ## What an extension is
 
 A directory containing:

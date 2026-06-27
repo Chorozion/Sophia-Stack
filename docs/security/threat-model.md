@@ -70,7 +70,7 @@ with an AI write-API is a real attack surface.
    hardened multi-tenant isolate. *Mitigation:* only let trusted parties define
    functions (function definition is a token-gated model edit); a hardened
    (`isolated-vm`) sandbox is **(planned)**. See
-   [Server Functions](./server-functions.md).
+   [Server Functions](../platform/server-functions.md).
 
 3. **`/api/fn/<name>` endpoints are public.** Any visitor can call any defined
    function with arbitrary input — there's **no built-in auth or rate-limit** on
@@ -127,7 +127,7 @@ always has on a self-hosted box.
 | [`SECURITY.md`](../../SECURITY.md) | Narrative security overview |
 | [Production Checklist](./production-checklist.md) | Pre-prod steps |
 | [Key Management](./key-management.md) | Tokens, roles, rotation |
-| [Server Functions](./server-functions.md) | Sandbox details |
+| [Server Functions](../platform/server-functions.md) | Sandbox details |
 | [`src/server.mjs`](../../src/server.mjs) | Auth, guard, sanitization wiring |
 | [`src/validate.mjs`](../../src/validate.mjs) | Validation + CSS sanitizer |
 | [`src/sandbox.mjs`](../../src/sandbox.mjs) | The vm sandbox |
