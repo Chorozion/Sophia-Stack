@@ -3,10 +3,15 @@
 Generate images for the site you're building — and have the AI write prompts that **fit your site**.
 
 ## Providers (bring your own key)
+- **fal.ai · Seedream 4.5** — `fal-ai/bytedance/seedream/v4.5/text-to-image` (best quality)
+- **fal.ai · Nano Banana 2** — `fal-ai/nano-banana-2` (Gemini-class)
+- **fal.ai · FLUX schnell** — `fal-ai/flux/schnell` (fastest)
 - **OpenAI** — `gpt-image-1` (`/v1/images/generations`)
-- **fal.ai** — FLUX schnell (fast + cheap)
 - **Google Imagen 3** — `imagen-3.0-generate-002:predict`
 - **Placeholder** — a free, key-free branded SVG (instant mockups / testing)
+
+All three fal models share one **fal.ai key**. Auth is `Authorization: Key <fal_key>`; they return
+`images[].url`, which Image Studio downloads and saves to your media library.
 
 Add your key in the **Image Studio** tab (it's stored on your server only).
 

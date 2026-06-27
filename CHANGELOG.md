@@ -10,7 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`ctx.media.save()`** — extensions with `media:write` can save images/files to the site's media
   library (`buffer | base64 | data URL` → `{ id, url, type }`).
 - **Image Studio extension** (`examples/extensions/sophia-image-gen`): provider-agnostic image
-  generation (OpenAI `gpt-image-1`, fal.ai FLUX, Google Imagen 3, + a key-free SVG placeholder).
+  generation — **fal.ai Seedream 4.5**, **fal.ai Nano Banana 2**, fal.ai FLUX, OpenAI `gpt-image-1`,
+  Google Imagen 3, + a key-free SVG placeholder (the three fal models share one fal key).
   Reads the Site Model and uses the configured AI to write **context-aware prompts**, saves to media,
   and can drop the image straight into a block via a safe patch.
 

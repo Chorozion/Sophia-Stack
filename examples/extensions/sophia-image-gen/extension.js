@@ -20,20 +20,33 @@ async function genOpenAI(key, prompt, size) {
   return { dataUrl: "data:image/png;base64," + b64 };
 }
 
-async function genFal(key, prompt, size) {
-  const image_size = size === SIZE.landscape ? "landscape_16_9" : size === SIZE.portrait ? "portrait_16_9" : "square_hd";
-  const r = await fetch("https://fal.run/fal-ai/flux/schnell", {
+// fal.ai models all use POST https://fal.run/<model> with `Authorization: Key <falKey>`
+// and return images[].url. Param shape differs: "image_size" (FLUX, Seedream) vs
+// "aspect_ratio" + "resolution" (Nano Banana 2).
+async function genFalModel(key, model, prompt, size, shape) {
+  const land = size === SIZE.landscape, port = size === SIZE.portrait;
+  const body = { prompt, num_images: 1 };
+  if (shape === "aspect") { body.aspect_ratio = land ? "16:9" : port ? "9:16" : "1:1"; body.resolution = "2K"; body.output_format = "png"; }
+  else body.image_size = land ? "landscape_16_9" : port ? "portrait_16_9" : "square_hd";
+  const r = await fetch("https://fal.run/" + model, {
     method: "POST", headers: { Authorization: "Key " + key, "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt, image_size, num_images: 1 }),
+    body: JSON.stringify(body),
   });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(j.detail || (j.error && j.error.message) || ("fal error " + r.status));
   const url = j.images && j.images[0] && j.images[0].url;
   if (!url) throw new Error("fal returned no image");
   const ir = await fetch(url); // fetch the hosted image so we own it locally
-  if (!ir.ok) throw new Error("could not download the fal image");
-  return { buffer: Buffer.from(await ir.arrayBuffer()), type: ir.headers.get("content-type") || "image/jpeg" };
+  if (!ir.ok) throw new Error("could not download the generated image");
+  return { buffer: Buffer.from(await ir.arrayBuffer()), type: ir.headers.get("content-type") || "image/png" };
 }
+
+// model id + param shape per fal model.
+const FAL_MODELS = {
+  "fal-flux": ["fal-ai/flux/schnell", "image_size"],
+  "fal-seedream": ["fal-ai/bytedance/seedream/v4.5/text-to-image", "image_size"],
+  "fal-nano-banana": ["fal-ai/nano-banana-2", "aspect"],
+};
 
 async function genImagen(key, prompt, size) {
   const aspectRatio = size === SIZE.landscape ? "16:9" : size === SIZE.portrait ? "9:16" : "1:1";
@@ -68,7 +81,7 @@ async function refinePrompt(ctx, request) {
   } catch { return request; }
 }
 
-const KEY_SETTING = { openai: "openaiKey", fal: "falKey", imagen: "geminiKey" };
+const KEY_SETTING = { openai: "openaiKey", imagen: "geminiKey", fal: "falKey", "fal-flux": "falKey", "fal-seedream": "falKey", "fal-nano-banana": "falKey" };
 
 export default {
   async activate(ctx) {
@@ -89,10 +102,11 @@ export default {
         if (provider === "placeholder") out = genPlaceholder(prompt);
         else {
           const key = ctx.settings.get(KEY_SETTING[provider]);
-          if (!key) return h.send(res, 400, { error: `add your ${provider} API key in Image Studio first` });
+          if (!key) return h.send(res, 400, { error: `add your ${KEY_SETTING[provider] === "falKey" ? "fal.ai" : provider} API key in Image Studio first` });
           if (provider === "openai") out = await genOpenAI(key, prompt, size);
-          else if (provider === "fal") out = await genFal(key, prompt, size);
           else if (provider === "imagen") out = await genImagen(key, prompt, size);
+          else if (provider === "fal") out = await genFalModel(key, FAL_MODELS["fal-flux"][0], prompt, size, FAL_MODELS["fal-flux"][1]);
+          else if (FAL_MODELS[provider]) out = await genFalModel(key, FAL_MODELS[provider][0], prompt, size, FAL_MODELS[provider][1]);
           else return h.send(res, 400, { error: "unknown provider: " + provider });
         }
         const rec = out.buffer ? ctx.media.save(out.buffer, { type: out.type, name: "ai-image" }) : ctx.media.save(out.dataUrl, { name: "ai-image" });
@@ -128,7 +142,7 @@ img{max-width:100%;border-radius:10px;border:1px solid rgba(255,255,255,.1);marg
 </style></head><body>
 <h1>Image Studio</h1><p>Generate images for your site. Pick a provider, add your key, describe what you want.</p>
 <div class="card"><div class="row"><label>Provider</label>
-<select id="prov"><option value="placeholder">Placeholder (free, no key)</option><option value="fal">fal.ai · FLUX (fast)</option><option value="openai">OpenAI · gpt-image-1</option><option value="imagen">Google · Imagen 3</option></select>
+<select id="prov"><option value="placeholder">Placeholder (free, no key)</option><option value="fal-seedream">fal · Seedream 4.5 (best quality)</option><option value="fal-nano-banana">fal · Nano Banana 2 (Gemini)</option><option value="fal-flux">fal · FLUX schnell (fastest)</option><option value="openai">OpenAI · gpt-image-1</option><option value="imagen">Google · Imagen 3</option></select>
 <input id="key" placeholder="API key for the selected provider" style="flex:1;min-width:200px"><button id="savekey">Save key</button></div>
 <div class="muted">Keys: OpenAI platform.openai.com · fal.ai/dashboard/keys · Google aistudio.google.com/apikey. Stored on your server only.</div></div>
 <div class="card">
