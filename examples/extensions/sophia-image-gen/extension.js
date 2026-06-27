@@ -83,6 +83,33 @@ async function refinePrompt(ctx, request) {
 
 const KEY_SETTING = { openai: "openaiKey", imagen: "geminiKey", fal: "falKey", "fal-flux": "falKey", "fal-seedream": "falKey", "fal-nano-banana": "falKey" };
 
+// Shared by the /generate route AND the `generate` job (which the main builder calls).
+async function doGenerate(ctx, body) {
+  body = body || {};
+  if (!body.prompt) return { ok: false, error: "prompt required" };
+  const provider = body.provider || ctx.settings.get("provider") || "placeholder";
+  let prompt = String(body.prompt);
+  if (body.contextual) prompt = await refinePrompt(ctx, prompt);
+  const size = SIZE[body.size] || body.size || SIZE.landscape;
+  try {
+    let out;
+    if (provider === "placeholder") out = genPlaceholder(prompt);
+    else {
+      const key = ctx.settings.get(KEY_SETTING[provider]);
+      if (!key) return { ok: false, error: `add your ${KEY_SETTING[provider] === "falKey" ? "fal.ai" : provider} API key in Image Studio first` };
+      if (provider === "openai") out = await genOpenAI(key, prompt, size);
+      else if (provider === "imagen") out = await genImagen(key, prompt, size);
+      else if (provider === "fal") out = await genFalModel(key, FAL_MODELS["fal-flux"][0], prompt, size, FAL_MODELS["fal-flux"][1]);
+      else if (FAL_MODELS[provider]) out = await genFalModel(key, FAL_MODELS[provider][0], prompt, size, FAL_MODELS[provider][1]);
+      else return { ok: false, error: "unknown provider: " + provider };
+    }
+    const rec = out.buffer ? ctx.media.save(out.buffer, { type: out.type, name: "ai-image" }) : ctx.media.save(out.dataUrl, { name: "ai-image" });
+    ctx.audit.log("generate", { provider, prompt: prompt.slice(0, 80) });
+    if (body.place && body.place.id && body.place.path) ctx.site.patch([{ op: "set", id: body.place.id, path: body.place.path, value: rec.url }], "image-gen");
+    return { ok: true, url: rec.url, prompt, provider };
+  } catch (e) { return { ok: false, error: String(e.message || e) }; }
+}
+
 export default {
   async activate(ctx) {
     ctx.settings.register({ provider: { type: "string", default: "placeholder" }, openaiKey: { type: "string", default: "" }, falKey: { type: "string", default: "" }, geminiKey: { type: "string", default: "" } });
@@ -92,29 +119,11 @@ export default {
     ctx.routes.register("/generate", async (req, res, h) => {
       if (!h.isAdmin && !h.hasToken) return h.send(res, 401, { error: "auth required" });
       let body = {}; try { body = JSON.parse((await h.readBody(req)) || "{}"); } catch {}
-      if (!body.prompt) return h.send(res, 400, { error: "prompt required" });
-      const provider = body.provider || ctx.settings.get("provider") || "placeholder";
-      let prompt = String(body.prompt);
-      if (body.contextual) prompt = await refinePrompt(ctx, prompt);
-      const size = SIZE[body.size] || body.size || SIZE.landscape;
-      try {
-        let out;
-        if (provider === "placeholder") out = genPlaceholder(prompt);
-        else {
-          const key = ctx.settings.get(KEY_SETTING[provider]);
-          if (!key) return h.send(res, 400, { error: `add your ${KEY_SETTING[provider] === "falKey" ? "fal.ai" : provider} API key in Image Studio first` });
-          if (provider === "openai") out = await genOpenAI(key, prompt, size);
-          else if (provider === "imagen") out = await genImagen(key, prompt, size);
-          else if (provider === "fal") out = await genFalModel(key, FAL_MODELS["fal-flux"][0], prompt, size, FAL_MODELS["fal-flux"][1]);
-          else if (FAL_MODELS[provider]) out = await genFalModel(key, FAL_MODELS[provider][0], prompt, size, FAL_MODELS[provider][1]);
-          else return h.send(res, 400, { error: "unknown provider: " + provider });
-        }
-        const rec = out.buffer ? ctx.media.save(out.buffer, { type: out.type, name: "ai-image" }) : ctx.media.save(out.dataUrl, { name: "ai-image" });
-        ctx.audit.log("generate", { provider, prompt: prompt.slice(0, 80) });
-        if (body.place && body.place.id && body.place.path) ctx.site.patch([{ op: "set", id: body.place.id, path: body.place.path, value: rec.url }], "image-gen");
-        return h.send(res, 200, { ok: true, url: rec.url, prompt, provider });
-      } catch (e) { return h.send(res, 502, { error: String(e.message || e) }); }
+      const r = await doGenerate(ctx, body);
+      return h.send(res, r.ok ? 200 : (/api key|prompt required|unknown provider/.test(r.error || "") ? 400 : 502), r);
     });
+    // The main builder calls this job (via the generate_image tool) to make site images.
+    ctx.jobs.register("generate", (payload) => doGenerate(ctx, { contextual: true, ...payload }));
 
     // PUT /keys { provider?, openaiKey?, falKey?, geminiKey? } — owner saves config.
     ctx.routes.register("/keys", async (req, res, h) => {
@@ -140,11 +149,11 @@ button{background:#00c2e0;color:#04212c;border:0;border-radius:8px;padding:9px 1
 img{max-width:100%;border-radius:10px;border:1px solid rgba(255,255,255,.1);margin-top:12px}
 .muted{color:#5a7a90;font-size:12px}code{color:#ff7a45}
 </style></head><body>
-<h1>Image Studio</h1><p>Generate images for your site. Pick a provider, add your key, describe what you want.</p>
+<h1>Image Studio</h1><p>1) Pick a provider · 2) Get a key (link below) and paste it · 3) Describe your image · 4) Generate. The image saves to your media library.</p>
 <div class="card"><div class="row"><label>Provider</label>
 <select id="prov"><option value="placeholder">Placeholder (free, no key)</option><option value="fal-seedream">fal · Seedream 4.5 (best quality)</option><option value="fal-nano-banana">fal · Nano Banana 2 (Gemini)</option><option value="fal-flux">fal · FLUX schnell (fastest)</option><option value="openai">OpenAI · gpt-image-1</option><option value="imagen">Google · Imagen 3</option></select>
-<input id="key" placeholder="API key for the selected provider" style="flex:1;min-width:200px"><button id="savekey">Save key</button></div>
-<div class="muted">Keys: OpenAI platform.openai.com · fal.ai/dashboard/keys · Google aistudio.google.com/apikey. Stored on your server only.</div></div>
+<input id="key" placeholder="paste your API key" style="flex:1;min-width:200px"><button id="savekey">Save key</button></div>
+<div class="muted" id="keyhelp" style="margin-top:4px"></div></div>
 <div class="card">
 <textarea id="prompt" placeholder="e.g. a warm, inviting hero photo for a neighborhood coffee shop at golden hour"></textarea>
 <div class="row"><label><input type="checkbox" id="ctx" checked> Match my site</label>
@@ -153,6 +162,16 @@ img{max-width:100%;border-radius:10px;border:1px solid rgba(255,255,255,.1);marg
 <div id="result"></div></div>
 <script>
 var $=function(i){return document.getElementById(i)};
+var LINKS={
+  'fal-seedream':{key:'https://fal.ai/dashboard/keys',keyName:'fal.ai',model:'https://fal.ai/models/fal-ai/bytedance/seedream/v4.5/text-to-image',note:'Seedream 4.5 — best quality. One fal.ai key works for all three fal models.'},
+  'fal-nano-banana':{key:'https://fal.ai/dashboard/keys',keyName:'fal.ai',model:'https://fal.ai/models/fal-ai/nano-banana-2',note:'Nano Banana 2 (Gemini-class). One fal.ai key works for all three fal models.'},
+  'fal-flux':{key:'https://fal.ai/dashboard/keys',keyName:'fal.ai',model:'https://fal.ai/models/fal-ai/flux/schnell',note:'FLUX schnell — fastest, cheapest. One fal.ai key works for all three fal models.'},
+  'openai':{key:'https://platform.openai.com/api-keys',keyName:'OpenAI',model:'https://platform.openai.com/docs/guides/images',note:'gpt-image-1. Billing must be enabled on your OpenAI account.'},
+  'imagen':{key:'https://aistudio.google.com/apikey',keyName:'Google AI Studio',model:'https://ai.google.dev/gemini-api/docs/imagen',note:'Imagen 3. Needs an API key with image access (paid tier).'},
+  'placeholder':{note:'Free — no key needed. Generates a branded placeholder image (great for mockups/testing).'}
+};
+function updateHelp(){var l=LINKS[$('prov').value]||{};var h='';if(l.key){h+='<a href="'+l.key+'" target="_blank" rel="noopener">Get your '+l.keyName+' key &#8599;</a> &nbsp;·&nbsp; ';}if(l.model){h+='<a href="'+l.model+'" target="_blank" rel="noopener">model details &#8599;</a> &nbsp;·&nbsp; ';}h+=(l.note||'')+' Keys are stored on your server only, never in the page.';$('keyhelp').innerHTML=h;var needsKey=!!l.key;$('key').style.display=needsKey?'':'none';$('savekey').style.display=needsKey?'':'none';}
+$('prov').onchange=updateHelp;updateHelp();
 function api(p,b){return fetch('/api/extensions/sophia-image-gen/'+p,{method:b?'POST':'GET',headers:b?{'Content-Type':'application/json'}:{},credentials:'same-origin',body:b?JSON.stringify(b):undefined}).then(function(r){return r.json()})}
 $('savekey').onclick=function(){var p=$('prov').value;var b={provider:p};b[p==='openai'?'openaiKey':p==='imagen'?'geminiKey':'falKey']=$('key').value;
   fetch('/api/extensions/sophia-image-gen/keys',{method:'PUT',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify(b)}).then(function(r){return r.json()}).then(function(){$('msg').textContent='saved ✓';setTimeout(function(){$('msg').textContent=''},1500)})};

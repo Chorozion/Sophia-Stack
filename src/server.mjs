@@ -73,10 +73,11 @@ function extractPatch(text) {
   return null;
 }
 // System prompt for the agent loop (the AI uses tools, not one-shot JSON).
-function agentSystemPrompt(catalog) {
+function agentSystemPrompt(catalog, imageGen) {
   const blocks = Object.keys(catalog.blocks || {}).join(", ");
   const styles = (Array.isArray(catalog.styles) ? catalog.styles.map((s) => s.id || s.name || s) : Object.keys(catalog.styles || {})).join(", ");
   return [
+    ...(imageGen ? ["When the site would benefit from an image (hero, gallery, background), call generate_image with a short visual description — it returns a url. Then set that url as the block's image/background prop via apply_patch. Don't use placeholder/stock URLs when you can generate one."] : []),
     "You are Sophia, a friendly AI web designer. You chat with the user and build/edit their live website by calling tools. Hold a natural back-and-forth: greet them, and if a request is vague, ask ONE quick clarifying question before building. Always explain in plain language what you did, and suggest a next step.",
     "When the user asks for something concrete, build it well: call read_model and read_catalog, then make changes with apply_patch. Produce complete, professional results — real content, multiple sections, good copy (no placeholders). If apply_patch returns validation errors, read them, fix, and retry. Use set_css for custom styling.",
     "If the user is only chatting or is unclear, reply conversationally and ask what they'd like to build — do NOT change the site until you understand. End every reply with a short, friendly note of what changed (if anything) and a suggested next step.",
@@ -92,10 +93,13 @@ const AGENT_TOOLS = [
   { type: "function", function: { name: "apply_patch", description: "Apply patch ops to the live site. Returns ok + changed, or ok:false + validation errors to fix.", parameters: { type: "object", properties: { ops: { type: "array", items: { type: "object" } } }, required: ["ops"] } } },
   { type: "function", function: { name: "set_css", description: "Replace the live custom CSS layer.", parameters: { type: "object", properties: { css: { type: "string" } }, required: ["css"] } } },
 ];
+// Offered to the agent only when the Image Studio extension is installed + active.
+const IMAGE_TOOL = { type: "function", function: { name: "generate_image", description: "Generate an image for the site (saved to media) and get back a URL to use as a block's image/background via apply_patch. Provide a concise visual description; it's auto-tailored to the site.", parameters: { type: "object", properties: { prompt: { type: "string", description: "what the image should show, e.g. 'warm coffee-shop hero, golden hour'" } }, required: ["prompt"] } } };
+const imageGenOn = (extHost) => extHost.list().some((e) => e.id === "sophia-image-gen" && e.active);
 // Provider-agnostic: dispatches to the configured adapter (openai-compatible,
 // anthropic, gemini, local, custom). See src/providers.mjs.
-async function callLLM(llm, messages) {
-  return callProvider(llm, messages, AGENT_TOOLS);
+async function callLLM(llm, messages, tools = AGENT_TOOLS) {
+  return callProvider(llm, messages, tools);
 }
 const send = (res, code, obj) => { res.writeHead(code, { "Content-Type": "application/json" }); res.end(JSON.stringify(obj)); };
 
@@ -810,7 +814,9 @@ ${CORE_FOOTER}
           if (hits.length) memHint = "\n\nRelevant context from this project (for grounding — use what helps):\n" + hits.map((h) => "- [" + h.kind + "] " + h.text.slice(0, 160)).join("\n");
         }
       } catch {}
-      const messages = [{ role: "system", content: agentSystemPrompt(catalog) + memHint }, ...history];
+      const imgOn = imageGenOn(extHost);
+      const tools = imgOn ? [...AGENT_TOOLS, IMAGE_TOOL] : AGENT_TOOLS;
+      const messages = [{ role: "system", content: agentSystemPrompt(catalog, imgOn) + memHint }, ...history];
       const applied = [];
       // VEX preview mode: stage edits against a clone (validated) WITHOUT committing,
       // so the builder can show them optimistically and the owner Applies or Discards.
@@ -826,7 +832,7 @@ ${CORE_FOOTER}
       const finish = (reply) => send(res, 200, preview ? { ok: true, reply, applied, preview: { ops: previewOps, css: previewCss } } : { ok: true, reply, applied });
       try {
         for (let step = 0; step < 10; step++) {
-          const msg = await callLLM(llm, messages);
+          const msg = await callLLM(llm, messages, tools);
           if (!msg) return send(res, 502, { error: "llm_error", message: "empty AI response" });
           messages.push(msg);
           const calls = msg.tool_calls || [];
@@ -837,6 +843,7 @@ ${CORE_FOOTER}
             let result;
             if (name === "read_model") result = JSON.stringify(preview ? previewModel : model);
             else if (name === "read_catalog") result = readFileSync(catalogPath, "utf8");
+            else if (name === "generate_image") { const jr = await extHost.runJob("sophia-image-gen", "generate", { prompt: args.prompt }); const g = jr.ok ? jr.result : { ok: false, error: jr.error }; result = JSON.stringify(g && g.ok ? { ok: true, url: g.url } : { ok: false, error: (g && g.error) || "image generation unavailable" }); }
             else if (name === "apply_patch") { const r = preview ? stagePatch(args.ops || []) : doPatch(args.ops || []); if (r.ok && r.changed) applied.push(...r.changed); result = JSON.stringify(r); }
             else if (name === "set_css") {
               if (preview) { const s = sanitizeCss(args.css || ""); if (s.ok) { previewCss = s.css; result = JSON.stringify({ ok: true, preview: true }); } else result = JSON.stringify({ ok: false, error: "unsafe css", details: s.errors }); }
@@ -861,7 +868,9 @@ ${CORE_FOOTER}
       let catalog; try { catalog = JSON.parse(readFileSync(catalogPath, "utf8")); } catch { catalog = { blocks: {}, styles: [] }; }
       let memHint = "";
       try { const lastUser = [...history].reverse().find((x) => x.role === "user"); if (lastUser && memory.ready) { const hits = await memory.retrieve(lastUser.content, 5); if (hits.length) memHint = "\n\nRelevant context from this project:\n" + hits.map((h) => "- [" + h.kind + "] " + h.text.slice(0, 160)).join("\n"); } } catch {}
-      const messages = [{ role: "system", content: agentSystemPrompt(catalog) + memHint }, ...history];
+      const imgOn = imageGenOn(extHost);
+      const tools = imgOn ? [...AGENT_TOOLS, IMAGE_TOOL] : AGENT_TOOLS;
+      const messages = [{ role: "system", content: agentSystemPrompt(catalog, imgOn) + memHint }, ...history];
       res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive", "X-Accel-Buffering": "no" });
       const sse = (o) => res.write("data: " + JSON.stringify(o) + "\n\n");
       const applied = [], preview = !!body.preview;
@@ -869,7 +878,7 @@ ${CORE_FOOTER}
       const stagePatch = (ops) => { const r = applyPatch(previewModel, ops || []); const v = validateModel(r.model); if (!v.ok) return { ok: false, code: 422, error: "edit rejected — would break the site", details: v.errors }; previewModel = r.model; previewOps.push(...(ops || [])); return { ok: true, changed: r.changed, preview: true }; };
       try {
         for (let step = 0; step < 10; step++) {
-          const msg = await callProviderStream(llm, messages, AGENT_TOOLS, (t) => sse({ type: "token", text: t }));
+          const msg = await callProviderStream(llm, messages, tools, (t) => sse({ type: "token", text: t }));
           messages.push(msg);
           const calls = msg.tool_calls || [];
           if (!calls.length) { sse({ type: "done", reply: msg.content || "Done.", applied, ...(preview ? { preview: { ops: previewOps, css: previewCss } } : {}) }); return res.end(); }
@@ -880,6 +889,7 @@ ${CORE_FOOTER}
             let result;
             if (name === "read_model") result = JSON.stringify(preview ? previewModel : model);
             else if (name === "read_catalog") result = readFileSync(catalogPath, "utf8");
+            else if (name === "generate_image") { const jr = await extHost.runJob("sophia-image-gen", "generate", { prompt: args.prompt }); const g = jr.ok ? jr.result : { ok: false, error: jr.error }; result = JSON.stringify(g && g.ok ? { ok: true, url: g.url } : { ok: false, error: (g && g.error) || "image generation unavailable" }); }
             else if (name === "apply_patch") { const r = preview ? stagePatch(args.ops || []) : doPatch(args.ops || []); if (r.ok && r.changed) applied.push(...r.changed); if (r.ok && !preview) { extHost.emit("site.afterPatch", { ops: args.ops, changed: r.changed }); extHost.emit("page.afterSave", { ops: args.ops, changed: r.changed }); extHost.emit("seo.audit.requested", { reason: "content-changed", changed: r.changed }); } result = JSON.stringify(r); }
             else if (name === "set_css") { if (preview) { const s = sanitizeCss(args.css || ""); if (s.ok) { previewCss = s.css; result = JSON.stringify({ ok: true, preview: true }); } else result = JSON.stringify({ ok: false, error: "unsafe css" }); } else { const r = doSetCss(args.css || ""); if (r.ok) applied.push("css"); result = JSON.stringify(r); } }
             else result = "unknown tool";

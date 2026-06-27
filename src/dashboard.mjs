@@ -63,6 +63,7 @@ a{color:#00D4FF}.hide{display:none}code{color:#FF6B35}</style></head>
   function extensions(P){
     P.innerHTML='<div class="card"><h2>Extensions</h2><p>Add features with one click &mdash; installed straight from a public git repo, non-destructively. Your site data is never touched.</p>'
       +'<div class="item" style="background:linear-gradient(120deg,rgba(0,212,255,.08),transparent)"><span><b>Sophia SEO Suite</b> <span style="color:#7d93a8;font-size:12px">SEO audits · metadata · schema · sitemaps</span></span><button id="addseo">Add</button></div>'
+      +'<div class="item" style="background:linear-gradient(120deg,rgba(0,212,255,.08),transparent)"><span><b>Image Studio</b> <span style="color:#7d93a8;font-size:12px">AI images · Seedream 4.5 · Nano Banana 2 · OpenAI · Imagen</span></span><button id="addimg">Add</button></div>'
       +'<div class="label" style="margin-top:14px">Install from a git repo <span style="color:#7d93a8;font-size:12px">(owner/repo, owner/repo#branch, or a GitHub URL)</span></div>'
       +'<div class="row"><input id="girepo" placeholder="owner/repo" style="flex:2;margin:0"><input id="gisub" placeholder="subdir (optional)" style="flex:1;margin:0"><button id="giadd" class="ghost">Install</button></div>'
       +'<div id="gimsg" style="font-size:13px;margin-top:8px"></div>'
@@ -78,6 +79,7 @@ a{color:#00D4FF}.hide{display:none}code{color:#FF6B35}</style></head>
         else{$('gimsg').innerHTML='<span style="color:#ff8a8a">'+esc((r&&r.error)||'install failed')+'</span>'}
       })}
     $('addseo').onclick=function(){install('Chorozion/SophiaXT-SEO-Suite','extensions/sophia-stack',this)};
+    $('addimg').onclick=function(){install('Chorozion/Sophia-Stack','examples/extensions/sophia-image-gen',this)};
     $('giadd').onclick=function(){var rp=$('girepo').value.trim();if(!rp){$('gimsg').textContent='Enter a repo.';return}install(rp,$('gisub').value.trim(),this)};
     load();
   }

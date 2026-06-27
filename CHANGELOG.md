@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **The builder generates images** — when **Image Studio** is installed, the AI builder gets a
+  `generate_image` tool: it makes a site-fitting image, saves it to media, and places it on a block
+  (via `apply_patch`). Works in the chat + streaming builder. The extension also exposes a `generate`
+  job and the panel now has **per-provider "Get a key" + model links**.
+- **One-click "Add Image Studio"** in the Extensions tab (installs from this repo).
 - **`ctx.media.save()`** — extensions with `media:write` can save images/files to the site's media
   library (`buffer | base64 | data URL` → `{ id, url, type }`).
 - **Image Studio extension** (`examples/extensions/sophia-image-gen`): provider-agnostic image
