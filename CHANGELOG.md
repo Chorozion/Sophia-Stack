@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **SEO metadata rendering**: optional `model.seo` (site defaults) + `pages.<route>.seo` are now served
+  in `<head>` — meta description, canonical, robots, OpenGraph, Twitter Card, and script-safe JSON-LD.
+- **Enumerable versions + targeted rollback**: `GET /api/sophia/versions` (ids/labels), an optional
+  `label` on patches, and `POST /api/sophia/rollback { id }` to revert one specific change without
+  clobbering later edits. Extensions get `ctx.versions.list()` / `ctx.versions.rollbackTo(id)`.
 - **Owner payments / Stripe** (`src/payments.mjs`): the owner connects **their own** Stripe (Settings →
   Payments or env) to sell products/subscriptions — Sophia takes no cut. Checkout sessions, product
   creation, and **signature-verified webhooks** that stamp member `meta` (plan/customer). Processor-

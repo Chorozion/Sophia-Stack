@@ -235,13 +235,22 @@ export async function createServer(opts = {}) {
 
   // ── Shared edit operations (one source of truth for REST + MCP) ──
   // Each validates / snapshots / persists / broadcasts and returns a result.
-  function doPatch(ops) {
+  function doPatch(ops, label = "") {
     const r = applyPatch(model, ops);
     const v = validateModel(r.model);
     if (!v.ok) return { ok: false, code: 422, error: "edit rejected — would break the site", details: v.errors };
-    store.snapshot(model, css);
+    store.snapshot(model, css, label);
     model = r.model; store.saveModel(model); broadcast({ type: "ops", ops });
     return { ok: true, changed: r.changed };
+  }
+  // Restore a SPECIFIC past version by id (snapshots the current state first, so it's reversible).
+  function doRollbackTo(id) {
+    const v = store.getVersion(id);
+    if (!v) return { ok: false, code: 404, error: "no such version" };
+    store.snapshot(model, css, "before rollback to " + id);
+    model = v.model; css = v.css; store.saveModel(model); store.saveCss(css);
+    broadcast({ type: "model", model }); broadcast({ type: "css", css });
+    return { ok: true, restored: true, id };
   }
   function doSetCss(cssIn) {
     const s = sanitizeCss(cssIn);
@@ -267,6 +276,7 @@ export async function createServer(opts = {}) {
     stackVersion: STACK_VERSION,
     getModel: () => model,
     doPatch, doSetCss,
+    versions: () => store.versions(), rollbackTo: doRollbackTo,
     store, dataStore, mediaStore, accounts,
     aiGenerate: async (opts) => {
       const llm = resolveProvider(tokens.llm);
@@ -286,9 +296,9 @@ export async function createServer(opts = {}) {
   });
   const extensionsDir = opts.extensionsDir || process.env.SOPHIA_EXTENSIONS_DIR || join(dir, "extensions");
 
-  const shell = (routePath = route) => {
+  const shell = (routePath = route, reqOrigin = "") => {
     const title = model?.pages?.[routePath]?.title || model.site || "Sophia";
-    const head = pageHead(model, routePath, css);
+    const head = pageHead(model, routePath, css, { origin: reqOrigin });
     const boot = JSON.stringify({ model, route: routePath, data }).replace(/</g, "\\u003c");
     return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title>${head}</head>
 <body><div id="root">${ssr(model, routePath, data)}</div>
@@ -316,7 +326,7 @@ ${CORE_FOOTER}
     if (m === "GET" && p === "/mcp") return send(res, 200, { name: "sophia-stack", transport: "http", protocolVersion: "2024-11-05", note: "POST JSON-RPC 2.0 here (initialize, tools/list, tools/call). Bearer token for writes." });
 
     // ── site + live preview ──────────────────────────────────────────────
-    if (m === "GET" && p === "/") { res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" }); return res.end(shell("/")); }
+    if (m === "GET" && p === "/") { res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" }); return res.end(shell("/", origin(req))); }
     if (m === "GET" && p === "/client.js") { res.writeHead(200, { "Content-Type": "text/javascript; charset=utf-8" }); return res.end(readFileSync(clientJs)); }
 
     // ── auto-generated production files (SEO + AI discovery) ──
@@ -764,20 +774,21 @@ ${CORE_FOOTER}
     if (m === "POST" && p === "/api/sophia/patch") {
       if (!canEdit(req)) return send(res, 401, { error: "owner or key required" });
       try {
-        const { ops } = JSON.parse((await readBody(req)) || "{}");
-        const r = doPatch(ops);
+        const { ops, label } = JSON.parse((await readBody(req)) || "{}");
+        const r = doPatch(ops, label);
         if (r.ok) { extHost.emit("site.afterPatch", { ops, changed: r.changed }); extHost.emit("page.afterSave", { ops, changed: r.changed }); }
         return send(res, r.ok ? 200 : (r.code || 400), r);
       } catch (e) { return send(res, 400, { error: String(e.message || e) }); }
     }
     if (m === "POST" && p === "/api/sophia/rollback") {
       if (!canEdit(req)) return send(res, 401, { error: "owner or key required" });
-      const r = doRollback();
+      let id = null; try { id = (JSON.parse((await readBody(req)) || "{}")).id || null; } catch {}
+      const r = id ? doRollbackTo(id) : doRollback();
       return send(res, r.ok ? 200 : (r.code || 400), r);
     }
     if (m === "GET" && p === "/api/sophia/versions") {
-      if (!auth(req)) return send(res, 401, { error: "token required" });
-      return send(res, 200, { count: store.history().length });
+      if (!canEdit(req)) return send(res, 401, { error: "owner or key required" });
+      return send(res, 200, { versions: store.versions(), count: store.history().length });
     }
 
     // ── token management (admin required) ────────────────────────────────
@@ -802,7 +813,7 @@ ${CORE_FOOTER}
     // ── multi-page: serve any route the agent has added to model.pages ──
     if (m === "GET" && model.pages && model.pages[p]) {
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-      return res.end(shell(p));
+      return res.end(shell(p, origin(req)));
     }
 
     res.writeHead(404); res.end("not found");

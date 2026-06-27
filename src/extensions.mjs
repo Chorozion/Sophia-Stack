@@ -77,14 +77,20 @@ export class ExtensionHost {
       logger: { info: (...a) => console.log(`[ext:${id}]`, ...a), error: (...a) => console.error(`[ext:${id}]`, ...a) },
       audit: { log: (action, details) => host.audit.log("ext:" + id, action, details) },
       // Site/pages: read freely (with perm); writes go through the validated pipeline.
+      // patch(ops, label?) — the optional label names the version snapshot for targeted rollback.
       site: {
         read: () => { need("site:read"); return host.deps.getModel(); },
-        patch: (ops) => { need("site:patch"); const r = host.deps.doPatch(ops); host.audit.log("ext:" + id, "site.patch", { ok: r.ok, changed: r.changed || null, error: r.error || null }); return r; },
+        patch: (ops, label) => { need("site:patch"); const r = host.deps.doPatch(ops, label || `ext:${id}`); host.audit.log("ext:" + id, "site.patch", { ok: r.ok, changed: r.changed || null, error: r.error || null, label: label || null }); return r; },
         setCss: (css) => { need("site:patch"); const r = host.deps.doSetCss(css); host.audit.log("ext:" + id, "site.setCss", { ok: r.ok }); return r; },
       },
       pages: {
         read: () => { need("pages:read"); return host.deps.getModel().pages; },
-        patch: (ops) => { need("pages:patch"); const r = host.deps.doPatch(ops); host.audit.log("ext:" + id, "pages.patch", { ok: r.ok }); return r; },
+        patch: (ops, label) => { need("pages:patch"); const r = host.deps.doPatch(ops, label || `ext:${id}`); host.audit.log("ext:" + id, "pages.patch", { ok: r.ok, label: label || null }); return r; },
+      },
+      // Enumerable versions + targeted rollback (snapshots current state first).
+      versions: {
+        list: () => { need("site:read"); return host.deps.versions(); },
+        rollbackTo: (vid) => { need("site:patch"); const r = host.deps.rollbackTo(vid); host.audit.log("ext:" + id, "versions.rollbackTo", { id: vid, ok: r.ok }); return r; },
       },
       media: { list: () => { need("media:read"); return host.deps.mediaStore.list(); } },
       // End-user accounts (members) — for memberships, portals, and payments.

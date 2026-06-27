@@ -26,9 +26,9 @@ export class Store {
   // Bounded version history (for rollback). Each entry is a {model, css} snapshot
   // of a KNOWN-GOOD state, newest last.
   history() { return this._readJson(this.historyPath, []); }
-  snapshot(model, css, max = 30) {
+  snapshot(model, css, label = "", max = 30) {
     const h = this.history();
-    h.push({ model, css: String(css || "") });
+    h.push({ id: "v-" + crypto.randomBytes(8).toString("base64url"), ts: new Date().toISOString(), label: String(label || ""), model, css: String(css || "") });
     while (h.length > max) h.shift();
     this._writeAtomic(this.historyPath, JSON.stringify(h));
   }
@@ -38,6 +38,9 @@ export class Store {
     this._writeAtomic(this.historyPath, JSON.stringify(h));
     return prev || null;
   }
+  // Enumerable versions (metadata only) + fetch one by id, for targeted rollback.
+  versions() { return this.history().map((e, i) => ({ id: e.id || "legacy-" + i, ts: e.ts || null, label: e.label || "" })); }
+  getVersion(id) { const e = this.history().find((x, i) => (x.id || "legacy-" + i) === id); return e ? { model: e.model, css: e.css } : null; }
 
   _readJson(p, fallback) {
     try { return existsSync(p) ? JSON.parse(readFileSync(p, "utf8")) : fallback; }

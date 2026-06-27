@@ -95,7 +95,41 @@ export const PRESET_NAMES = Object.keys(PRESETS);
 // Assemble <head> CSS for a page: fonts + reset + core + preset tokens/sig + used
 // effects, plus a SEPARATE live-editable custom CSS layer (id=sx-custom-live) the
 // running stack can update in real time (CSS editor, no redeploy).
-export function pageHead(model, route = "/", customCss = "") {
+// Render SEO metadata into <head>. Merges site-wide `model.seo` defaults with
+// per-page `pages.<route>.seo`. All values are escaped; JSON-LD is script-safe.
+export function seoTags(model, route = "/", opts = {}) {
+  const e = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const site = (model && model.seo) || {};
+  const page = (model && model.pages && model.pages[route] && model.pages[route].seo) || {};
+  const pick = (k) => (page[k] !== undefined ? page[k] : site[k]);
+  const title = opts.title || (model && model.pages && model.pages[route] && model.pages[route].title) || (model && model.site) || "";
+  const desc = pick("description");
+  const canonical = page.canonical || site.canonical || (opts.origin ? String(opts.origin).replace(/\/$/, "") + route : null);
+  const og = { title, description: desc, ...(site.openGraph || {}), ...(page.openGraph || {}) };
+  const tw = { ...(site.twitter || {}), ...(page.twitter || {}) };
+  const out = [];
+  if (desc) out.push(`<meta name="description" content="${e(desc)}">`);
+  const robots = pick("robots");
+  if (robots) out.push(`<meta name="robots" content="${e(robots)}">`);
+  if (canonical) out.push(`<link rel="canonical" href="${e(canonical)}">`);
+  if (og.title) out.push(`<meta property="og:title" content="${e(og.title)}">`);
+  if (og.description) out.push(`<meta property="og:description" content="${e(og.description)}">`);
+  out.push(`<meta property="og:type" content="${e(og.type || "website")}">`);
+  if (canonical) out.push(`<meta property="og:url" content="${e(canonical)}">`);
+  if (og.image) out.push(`<meta property="og:image" content="${e(og.image)}">`);
+  if (og.siteName || (model && model.site)) out.push(`<meta property="og:site_name" content="${e(og.siteName || model.site)}">`);
+  out.push(`<meta name="twitter:card" content="${e(tw.card || (og.image ? "summary_large_image" : "summary"))}">`);
+  if (og.title) out.push(`<meta name="twitter:title" content="${e(og.title)}">`);
+  if (og.description) out.push(`<meta name="twitter:description" content="${e(og.description)}">`);
+  if (og.image) out.push(`<meta name="twitter:image" content="${e(og.image)}">`);
+  if (tw.site) out.push(`<meta name="twitter:site" content="${e(tw.site)}">`);
+  for (const node of [].concat(site.jsonLd || [], page.jsonLd || []).filter(Boolean)) {
+    try { out.push(`<script type="application/ld+json">${JSON.stringify(node).replace(/</g, "\\u003c")}</script>`); } catch {}
+  }
+  return out.join("");
+}
+
+export function pageHead(model, route = "/", customCss = "", opts = {}) {
   const preset = PRESETS[model?.style] || PRESETS["sophia"];
   const used = new Set();
   for (const b of model?.pages?.[route]?.blocks || []) (b.fx || []).forEach((f) => used.add(f));
@@ -104,6 +138,6 @@ export function pageHead(model, route = "/", customCss = "") {
     .map((h) => `<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="${h}">`)
     .join("");
   const safeCustom = String(customCss || "").replace(/<\/style/gi, "<\\/style");
-  return `${fonts}<style>${RESET}\n${SX_CORE}\n:root{${preset.vars}}\n${preset.sig || ""}\n${fxCss}</style>` +
+  return `${seoTags(model, route, opts)}${fonts}<style>${RESET}\n${SX_CORE}\n:root{${preset.vars}}\n${preset.sig || ""}\n${fxCss}</style>` +
     `<style id="sx-custom-live">${safeCustom}</style>`;
 }
