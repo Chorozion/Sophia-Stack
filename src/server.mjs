@@ -445,6 +445,12 @@ ${CORE_FOOTER}
       if (!isAdmin(req)) return send(res, 401, { error: "owner only" });
       return send(res, 200, { entries: audit.tail(Number(url.searchParams.get("n")) || 200) });
     }
+    // First-run onboarding state (owner-only): drives the welcome wizard.
+    if (p === "/api/sophia/onboarding") {
+      if (!isAdmin(req)) return send(res, 401, { error: "owner only" });
+      if (m === "POST") { const b = JSON.parse((await readBody(req)) || "{}"); tokens.onboarded = !!b.done; store.saveTokens(tokens); return send(res, 200, { ok: true, done: tokens.onboarded }); }
+      return send(res, 200, { done: !!tokens.onboarded, ai: !!resolveProvider(tokens.llm) });
+    }
     // Builder memory (vector retrieval): status + rebuild (owner-only; optional feature)
     if (p === "/api/sophia/memory") {
       if (!isAdmin(req)) return send(res, 401, { error: "owner only" });

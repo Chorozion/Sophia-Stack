@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **First-run onboarding wizard** + intuitive dashboard: a "Welcome — let's get you live" checklist
+  (admin → recovery phrase → connect AI → build) that guides new users, Build as the default tab, and
+  a `GET/POST /api/sophia/onboarding` flag. Settings now defaults to **Basic** with a **Show advanced
+  settings** toggle (model/base-URL + Google sign-in hidden until enabled).
+- **Safe-update engine** (`src/safe-update.mjs`): non-destructive apply with **backup → apply →
+  spawn-based health check → auto-rollback** on any failure. `sophia update --apply` now health-checks
+  the new boot and reverts if it isn't healthy, then shows the changelog. `.sophia-data` is never touched.
 - **VEX — live preview pane**: split-screen builder (chat + a live `/?vex=1` iframe) that updates in
   real time over the existing `/live` SSE, highlights changed blocks, and supports an optimistic
   **preview → Apply / Discard** flow (the agent can stage edits against a validated clone without

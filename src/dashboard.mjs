@@ -21,6 +21,7 @@ a{color:#00D4FF}.hide{display:none}code{color:#FF6B35}</style></head>
 <body><div class="wrap">
   <div class="top"><div class="brand">Sophia · Dashboard</div><button class="logout" id="logout">Log out (${username || "admin"})</button></div>
   <div class="tabs" id="tabs"></div>
+  <div id="onboard"></div>
   <div id="panel"></div>
 </div>
 <script>
@@ -28,8 +29,28 @@ a{color:#00D4FF}.hide{display:none}code{color:#FF6B35}</style></head>
   var origin=location.origin+'/';
   var api=function(m,p,b){var o={method:m,headers:{}};if(b!==undefined){o.headers['Content-Type']='application/json';o.body=JSON.stringify(b)}return fetch(p,o).then(function(r){return r.json().catch(function(){return{}})})};
   var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
-  var TABS=['Connect','Build','Pages','Data','Media','Keys','Settings'];var cur='Connect';
+  var TABS=['Build','Connect','Pages','Data','Media','Keys','Settings'];var cur='Build';
   function renderTabs(){$('tabs').innerHTML=TABS.map(function(t){return '<div class="tab '+(t===cur?'on':'')+'" data-t="'+t+'">'+t+'</div>'}).join('');Array.prototype.forEach.call(document.querySelectorAll('.tab'),function(el){el.onclick=function(){cur=el.getAttribute('data-t');renderTabs();render()}})}
+  function goTab(t){cur=t;renderTabs();render();window.scrollTo(0,0)}
+  function initOnboarding(){
+    Promise.all([api('GET','/api/sophia/onboarding'),api('GET','/api/sophia/llm')]).then(function(r){
+      var ob=r[0]||{},llm=r[1]||{};var O=$('onboard');if(!O)return;
+      if(ob.done){O.innerHTML='';return}
+      var aiOK=!!(llm&&llm.configured);
+      function step(done,txt,btn,act){return '<div style="display:flex;align-items:center;gap:10px;padding:6px 0"><span style="width:22px;height:22px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:13px;'+(done?'background:#1f8a4c;color:#fff':'background:rgba(0,212,255,.12);color:#00D4FF;border:1px solid rgba(0,212,255,.3)')+'">'+(done?'&check;':'')+'</span><span style="flex:1;font-size:14px;'+(done?'color:#7d93a8':'color:#e8f4f8')+'">'+txt+'</span>'+(btn&&!done?'<button class="ghost" style="padding:4px 12px" data-act="'+act+'">'+btn+'</button>':'')+'</div>'}
+      O.innerHTML='<div class="card" style="border:1px solid rgba(0,212,255,.35);background:linear-gradient(160deg,rgba(0,212,255,.07),rgba(0,102,255,.03))">'
+        +'<div class="row" style="justify-content:space-between;align-items:center"><h2 style="margin:0">Welcome to Sophia &mdash; let&rsquo;s get you live</h2><span class="copy" id="obskip">skip</span></div>'
+        +'<p style="margin:6px 0 8px">A few quick steps and your site is live. No code needed &mdash; anybody can do this.</p>'
+        +step(true,'Admin account created &mdash; you&rsquo;re signed in.',null,null)
+        +step(true,'Recovery phrase saved at setup &mdash; keep it safe; it&rsquo;s how you get back in.',null,null)
+        +step(aiOK,'Connect an AI provider so Sophia can build for you.','Open Settings','Settings')
+        +step(false,'Describe your site in Build and watch it render live in VEX.','Start building','Build')
+        +'<div class="row" style="margin-top:8px"><button id="obdone">I&rsquo;m all set &mdash; finish</button></div></div>';
+      Array.prototype.forEach.call(document.querySelectorAll('[data-act]'),function(b){b.onclick=function(){goTab(b.getAttribute('data-act'))}});
+      function finish(){api('POST','/api/sophia/onboarding',{done:true}).then(function(){if($('onboard'))$('onboard').innerHTML=''})}
+      $('obdone').onclick=finish;$('obskip').onclick=finish;
+    });
+  }
   function render(){var P=$('panel');P.innerHTML='';if(cur==='Build')build(P);else if(cur==='Connect')connect(P);else if(cur==='Pages')pages(P);else if(cur==='Data')data(P);else if(cur==='Media')media(P);else if(cur==='Keys')keys(P);else settings(P)}
 
   // BUILD: describe -> copy prompt -> paste into ANY ai -> paste reply back -> apply.
@@ -214,20 +235,23 @@ a{color:#00D4FF}.hide{display:none}code{color:#FF6B35}</style></head>
   }
   function settings(P){
     P.innerHTML='<div class="card" id="updcard"><h2>Updates</h2><p id="upd" style="margin:0">Checking for updates&hellip;</p></div>'
-      +'<div class="card"><h2>AI key &mdash; let Sophia build for you</h2><p>Pick a provider, tap <b>Get a key</b>, sign up, copy the key, paste it below. Tap <b>Use</b> to auto-fill the model + URL. Then chat on the Build tab.</p>'
+      +'<div class="card"><h2>AI key &mdash; let Sophia build for you</h2><p>Pick a provider below, tap <b>Get a key</b>, sign up, copy the key, paste it here, Save. That&rsquo;s it &mdash; then chat on the Build tab.</p>'
       +'<div class="label">Providers (free signups)</div><div id="provs"></div>'
-      +'<div class="label">API key</div><input id="lk" placeholder="(leave blank to keep current)"><div class="label">Model</div><input id="lm" placeholder="gpt-4o-mini"><div class="label">API base URL (advanced)</div><input id="lb" placeholder="https://api.openai.com/v1">'
+      +'<div class="label">API key</div><input id="lk" placeholder="(leave blank to keep current)">'
+      +'<div id="advfields" class="hide"><div class="label">Model</div><input id="lm" placeholder="gpt-4o-mini"><div class="label">API base URL</div><input id="lb" placeholder="https://api.openai.com/v1"></div>'
       +'<div class="row"><button id="sl">Save</button> <span class="ok" id="lok"></span></div></div>'
       +'<div class="card"><h2>Describe your site</h2><p>Your AI reads this to know what to build.</p><textarea id="brief"></textarea><div class="row"><button id="sb">Save</button> <span class="ok" id="bok"></span></div></div>'
-      +'<div class="card"><h2>Sign in with Google <span style="color:#7d93a8;font-size:12px">(optional)</span></h2><p>Set up your OWN Google OAuth app, paste the credentials here, and you can sign in with Google. Redirect URL: <code>'+esc(origin)+'auth/google/callback</code></p>'
-      +'<label class="row" style="margin-bottom:8px"><input type="checkbox" id="oe" style="width:auto;margin:0"> Enable Google sign-in</label>'
-      +'<div class="label">Client ID</div><input id="ocid"><div class="label">Client Secret</div><input id="ocs" placeholder="(leave blank to keep current)"><div class="label">Your Google email (only this account may sign in)</div><input id="oem">'
-      +'<div class="row"><button id="so">Save</button> <span class="ok" id="ook"></span></div></div>'
       +'<div class="card"><h2>Payments &mdash; sell with your own Stripe <span style="color:#7d93a8;font-size:12px">(optional)</span></h2><p>Connect <b>your own</b> Stripe account to sell products or subscriptions to your customers &mdash; Sophia never takes a cut. Get keys at <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener">dashboard.stripe.com/apikeys</a> (use <b>test</b> keys first). For payment confirmations, add a Stripe webhook to <code>'+esc(origin)+'api/payments/webhook</code> and paste its signing secret.</p>'
       +'<div class="label">Stripe secret key</div><input id="psk" placeholder="sk_… (leave blank to keep current)">'
       +'<div class="label">Webhook signing secret</div><input id="pwh" placeholder="whsec_… (leave blank to keep current)">'
       +'<div class="label">Publishable key (optional)</div><input id="ppk" placeholder="pk_…">'
-      +'<div class="row"><button id="sp">Save</button> <span class="ok" id="pok"></span></div></div>';
+      +'<div class="row"><button id="sp">Save</button> <span class="ok" id="pok"></span></div></div>'
+      +'<label class="row" style="margin:2px 2px 12px;color:#9fc7d6;cursor:pointer"><input type="checkbox" id="advtog" style="width:auto;margin:0 7px 0 0"> Show advanced settings <span style="color:#7d93a8;font-size:12px">&nbsp;(model + base URL, Google sign-in)</span></label>'
+      +'<div id="advsec" class="hide"><div class="card"><h2>Sign in with Google <span style="color:#7d93a8;font-size:12px">(optional)</span></h2><p>Set up your OWN Google OAuth app, paste the credentials here, and you can sign in with Google. Redirect URL: <code>'+esc(origin)+'auth/google/callback</code></p>'
+      +'<label class="row" style="margin-bottom:8px"><input type="checkbox" id="oe" style="width:auto;margin:0"> Enable Google sign-in</label>'
+      +'<div class="label">Client ID</div><input id="ocid"><div class="label">Client Secret</div><input id="ocs" placeholder="(leave blank to keep current)"><div class="label">Your Google email (only this account may sign in)</div><input id="oem">'
+      +'<div class="row"><button id="so">Save</button> <span class="ok" id="ook"></span></div></div></div>';
+    $('advtog').onchange=function(){var sh=this.checked;['advfields','advsec'].forEach(function(id){var e=$(id);if(e)e.classList[sh?'remove':'add']('hide')})};
     api('GET','/api/sophia/update').then(function(j){var el=$('upd');if(!el)return;if(j.enabled===false){el.textContent='Update checks are off (SOPHIA_UPDATE_CHECK=off).';return}if(j.error){el.textContent='Installed v'+(j.current||'?')+' — could not check ('+j.error+').';return}if(j.updateAvailable){el.innerHTML='<b style="color:#FF6B35">Update available: v'+esc(j.latest)+'</b> &mdash; you have v'+esc(j.current)+'. Your data is preserved and auto-migrated. Run <code>sophia update --apply</code>, or replace app.js/public/catalog.json and restart.'+(j.releaseUrl?' <a href="'+esc(j.releaseUrl)+'" target="_blank" rel="noopener">What&rsquo;s new &#8599;</a>':'')}else{el.innerHTML='You&rsquo;re on the latest version (v'+esc(j.current)+') &check;'}}).catch(function(){});
     api('GET','/api/sophia/brief').then(function(j){$('brief').value=j.brief||''});
     $('sb').onclick=function(){api('PUT','/api/sophia/brief',{brief:$('brief').value}).then(function(){$('bok').textContent='saved ✓';setTimeout(function(){$('bok').textContent=''},2000)})};
@@ -255,6 +279,6 @@ a{color:#00D4FF}.hide{display:none}code{color:#FF6B35}</style></head>
     Array.prototype.forEach.call(document.querySelectorAll('[data-use]'),function(b){b.onclick=function(){var p=PROVIDERS[+b.getAttribute('data-use')];$('lb').value=p[2];$('lm').value=p[3];llmType=p[5]||'openai';$('lk').focus()}});
   }
   $('logout').onclick=function(){fetch('/_logout',{method:'POST'}).then(function(){location.href='/_setup'})};
-  renderTabs();render();
+  renderTabs();render();initOnboarding();
 </script></body></html>`;
 }

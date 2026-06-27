@@ -207,26 +207,35 @@ async function updateCmd(args) {
   await applyUpdate(u);
 }
 async function applyUpdate(u) {
-  const tmp = join(CWD, ".sophia-update");
-  mkdirSync(tmp, { recursive: true });
+  const { safeApply, httpHealthCheck } = await import("../src/safe-update.mjs");
+  const net = await import("node:net");
+  const freePort = () => new Promise((res) => { const s = net.createServer(); s.listen(0, "127.0.0.1", () => { const p = s.address().port; s.close(() => res(p)); }); });
+  const tmp = join(CWD, ".sophia-update"); mkdirSync(tmp, { recursive: true });
   const zipPath = join(tmp, u.asset.name || "sophia-stack.zip");
   info("downloading " + (u.asset.name || "release") + " …");
   const res = await fetch(u.asset.url);
   if (!res.ok) return die("download failed: HTTP " + res.status);
   writeFileSync(zipPath, Buffer.from(await res.arrayBuffer()));
-  const codeBak = join(tmp, "code-backup-" + u.current);
-  mkdirSync(codeBak, { recursive: true });
-  for (const f of ["app.js", "catalog.json"]) if (existsSync(join(CWD, f))) cpSync(join(CWD, f), join(codeBak, f));
-  if (existsSync(join(CWD, "public"))) cpSync(join(CWD, "public"), join(codeBak, "public"), { recursive: true });
   const ex = join(tmp, "extracted"); mkdirSync(ex, { recursive: true });
   let r = spawnSync("unzip", ["-o", zipPath, "-d", ex], { stdio: "inherit" });
   if (r.error || r.status !== 0) r = spawnSync("tar", ["-xf", zipPath, "-C", ex], { stdio: "inherit" });
   if (r.error || r.status !== 0) return die("could not extract the archive (need `unzip` or `tar`).", "extract " + zipPath + " yourself, then copy app.js/public/catalog.json over (keep .sophia-data)");
-  for (const f of ["app.js", "catalog.json"]) if (existsSync(join(ex, f))) cpSync(join(ex, f), join(CWD, f));
-  if (existsSync(join(ex, "public"))) cpSync(join(ex, "public"), join(CWD, "public"), { recursive: true });
-  ok("updated to " + u.latest + " — .sophia-data untouched (it auto-migrates on boot).");
-  console.log("  Restart to finish:  Passenger " + c.cyan("touch tmp/restart.txt") + "  ·  pm2 " + c.cyan("pm2 restart all") + "  ·  systemd " + c.cyan("systemctl restart <svc>"));
-  console.log(c.gray("  Old code backed up at " + codeBak));
+  const codeBak = join(tmp, "code-backup-" + u.current);
+  const FILES = ["app.js", "catalog.json"];
+  const cp = (from, to) => { for (const f of FILES) if (existsSync(join(from, f))) cpSync(join(from, f), join(to, f)); if (existsSync(join(from, "public"))) cpSync(join(from, "public"), join(to, "public"), { recursive: true }); };
+  // Non-destructive: back up current code, swap, HEALTH-CHECK the new boot, and
+  // auto-roll-back if it isn't healthy. .sophia-data is never touched here.
+  const result = await safeApply({
+    log: (m) => info(m),
+    backup: async () => { mkdirSync(codeBak, { recursive: true }); cp(CWD, codeBak); },
+    applyNew: async () => cp(ex, CWD),
+    healthCheck: async () => httpHealthCheck({ cwd: CWD, entry: "app.js", port: await freePort(), timeoutMs: 15000 }),
+    restore: async () => cp(codeBak, CWD),
+  });
+  if (!result.ok) return die("update aborted: " + result.error + (result.rolledBack ? " — rolled back, your site is unchanged" : ""), "your previous version is intact");
+  ok("updated to " + u.latest + " — health-checked; .sophia-data untouched (auto-migrates on boot).");
+  if (u.notes) { console.log(c.cyan("\n  What's new in " + u.latest + ":")); console.log(c.gray("  " + u.notes.split("\n").slice(0, 8).join("\n  "))); }
+  console.log("\n  Restart to finish:  Passenger " + c.cyan("touch tmp/restart.txt") + "  ·  pm2 " + c.cyan("pm2 restart all") + "  ·  systemd " + c.cyan("systemctl restart <svc>"));
 }
 
 if (cmd === "ai" || (cmd && cmd.startsWith("ai:"))) { await aiCmd(cmd.startsWith("ai:") ? cmd.slice(3) : argv[1]); process.exit(0); }
