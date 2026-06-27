@@ -140,6 +140,7 @@ export class ExtensionHost {
     if (!dir || !existsSync(dir)) return;
     const enabled = (this.deps.getEnabled && this.deps.getEnabled()) || {};
     for (const slug of readdirSync(dir)) {
+      if (slug.startsWith(".")) continue; // skip temp/backup dirs from the installer
       const mpath = join(dir, slug, "extension.json");
       if (!existsSync(mpath)) continue;
       let manifest;
@@ -154,6 +155,13 @@ export class ExtensionHost {
       this.exts.set(manifest.id, ext);
       if (isEnabled) await this.activate(manifest.id);
     }
+  }
+
+  // Re-scan after an install/uninstall: cleanly deactivate everything, then reload.
+  async reload(dir) {
+    for (const id of [...this.exts.keys()]) await this.deactivate(id);
+    this.exts.clear(); this.routes.clear(); this.hookListeners.clear();
+    await this.loadDir(dir);
   }
 
   async activate(id) {

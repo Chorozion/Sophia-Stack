@@ -24,6 +24,7 @@ import { dashboardPage } from "./dashboard.mjs";
 import { callProvider, resolveProvider, envProviders, embed } from "./providers.mjs";
 import { Memory, gatherSources } from "./memory.mjs";
 import { SKILL } from "./skill-text.mjs";
+import { installFromGit, uninstall as uninstallExt } from "./installer.mjs";
 import { ExtensionHost } from "./extensions.mjs";
 import { makeAudit } from "./audit.mjs";
 import { AccountStore } from "./accounts.mjs";
@@ -440,6 +441,24 @@ ${CORE_FOOTER}
       if (!isAdmin(req)) return send(res, 401, { error: "owner only" });
       if (m === "GET") return send(res, 200, { extensions: extHost.list(), nav: extHost.adminNav() });
       if (m === "POST") { const b = JSON.parse((await readBody(req)) || "{}"); if (!b.id) return send(res, 400, { error: "id required" }); return send(res, 200, await extHost.setEnabled(b.id, b.enabled !== false)); }
+    }
+    // One-click install straight from a public git repo (non-destructive; auto-rollback).
+    if (m === "POST" && p === "/api/sophia/extensions/install") {
+      if (!isAdmin(req)) return send(res, 401, { error: "owner only" });
+      const b = JSON.parse((await readBody(req)) || "{}");
+      if (!b.repo && !b.url) return send(res, 400, { error: "repo required (owner/repo or a GitHub URL)" });
+      const r = await installFromGit(b.repo || b.url, { extensionsDir, subdir: b.subdir });
+      if (r.ok) { await extHost.reload(extensionsDir); audit.log("owner", "extension.install", { id: r.id, source: r.source || null }); }
+      return send(res, r.ok ? 200 : 400, r);
+    }
+    if (m === "POST" && p === "/api/sophia/extensions/uninstall") {
+      if (!isAdmin(req)) return send(res, 401, { error: "owner only" });
+      const b = JSON.parse((await readBody(req)) || "{}");
+      if (!b.id) return send(res, 400, { error: "id required" });
+      await extHost.deactivate(b.id);
+      const r = uninstallExt(extensionsDir, b.id);
+      if (r.ok) { await extHost.reload(extensionsDir); audit.log("owner", "extension.uninstall", { id: b.id }); }
+      return send(res, r.ok ? 200 : 400, r);
     }
     if (m === "GET" && p === "/api/sophia/audit") {
       if (!isAdmin(req)) return send(res, 401, { error: "owner only" });

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **One-click extension install from git** (`src/installer.mjs`): the dashboard's new **Extensions** tab
+  installs an extension straight from a public GitHub repo — downloads the tarball, validates the
+  manifest + `requires.sophiaStack`, and installs **non-destructively** (backs up + auto-rolls-back on
+  any failure). "Add Sophia SEO Suite" button + install-from-URL + enable/disable/uninstall.
+  `POST /api/sophia/extensions/{install,uninstall}`.
+- **Chat-agent build UX**: the Build chat now stages in VEX by default and ships a prominent
+  **🚀 Push to Live** button (preview → push), with a "Sophia is thinking…" state.
 - **First-run onboarding wizard** + intuitive dashboard: a "Welcome — let's get you live" checklist
   (admin → recovery phrase → connect AI → build) that guides new users, Build as the default tab, and
   a `GET/POST /api/sophia/onboarding` flag. Settings now defaults to **Basic** with a **Show advanced

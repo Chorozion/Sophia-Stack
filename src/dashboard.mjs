@@ -29,7 +29,7 @@ a{color:#00D4FF}.hide{display:none}code{color:#FF6B35}</style></head>
   var origin=location.origin+'/';
   var api=function(m,p,b){var o={method:m,headers:{}};if(b!==undefined){o.headers['Content-Type']='application/json';o.body=JSON.stringify(b)}return fetch(p,o).then(function(r){return r.json().catch(function(){return{}})})};
   var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
-  var TABS=['Build','Connect','Pages','Data','Media','Keys','Settings'];var cur='Build';
+  var TABS=['Build','Connect','Pages','Data','Media','Keys','Extensions','Settings'];var cur='Build';
   function renderTabs(){$('tabs').innerHTML=TABS.map(function(t){return '<div class="tab '+(t===cur?'on':'')+'" data-t="'+t+'">'+t+'</div>'}).join('');Array.prototype.forEach.call(document.querySelectorAll('.tab'),function(el){el.onclick=function(){cur=el.getAttribute('data-t');renderTabs();render()}})}
   function goTab(t){cur=t;renderTabs();render();window.scrollTo(0,0)}
   function initOnboarding(){
@@ -51,7 +51,28 @@ a{color:#00D4FF}.hide{display:none}code{color:#FF6B35}</style></head>
       $('obdone').onclick=finish;$('obskip').onclick=finish;
     });
   }
-  function render(){var P=$('panel');P.innerHTML='';if(cur==='Build')build(P);else if(cur==='Connect')connect(P);else if(cur==='Pages')pages(P);else if(cur==='Data')data(P);else if(cur==='Media')media(P);else if(cur==='Keys')keys(P);else settings(P)}
+  function render(){var P=$('panel');P.innerHTML='';if(cur==='Build')build(P);else if(cur==='Connect')connect(P);else if(cur==='Pages')pages(P);else if(cur==='Data')data(P);else if(cur==='Media')media(P);else if(cur==='Keys')keys(P);else if(cur==='Extensions')extensions(P);else settings(P)}
+  function extensions(P){
+    P.innerHTML='<div class="card"><h2>Extensions</h2><p>Add features with one click &mdash; installed straight from a public git repo, non-destructively. Your site data is never touched.</p>'
+      +'<div class="item" style="background:linear-gradient(120deg,rgba(0,212,255,.08),transparent)"><span><b>Sophia SEO Suite</b> <span style="color:#7d93a8;font-size:12px">SEO audits · metadata · schema · sitemaps</span></span><button id="addseo">Add</button></div>'
+      +'<div class="label" style="margin-top:14px">Install from a git repo <span style="color:#7d93a8;font-size:12px">(owner/repo, owner/repo#branch, or a GitHub URL)</span></div>'
+      +'<div class="row"><input id="girepo" placeholder="owner/repo" style="flex:2;margin:0"><input id="gisub" placeholder="subdir (optional)" style="flex:1;margin:0"><button id="giadd" class="ghost">Install</button></div>'
+      +'<div id="gimsg" style="font-size:13px;margin-top:8px"></div>'
+      +'<div class="label" style="margin-top:16px">Installed</div><div id="extlist">loading&hellip;</div></div>';
+    function load(){api('GET','/api/sophia/extensions').then(function(j){var ex=(j&&j.extensions)||[];
+      $('extlist').innerHTML=ex.length?ex.map(function(e){return '<div class="item"><span><b>'+esc(e.name)+'</b> <span style="color:#7d93a8;font-size:12px">v'+esc(e.version)+' &middot; '+(e.active?'<span style="color:#5fd38a">active</span>':'disabled')+(e.error?' &middot; <span style="color:#ff8a8a">'+esc(e.error)+'</span>':'')+'</span></span><span class="row"><button class="ghost" data-tog="'+esc(e.id)+'" data-on="'+(e.enabled?'1':'0')+'">'+(e.enabled?'Disable':'Enable')+'</button> <button class="danger" data-unin="'+esc(e.id)+'">Uninstall</button></span></div>'}).join(''):'<div style="color:#7d93a8;font-size:13px">No extensions installed yet.</div>';
+      Array.prototype.forEach.call(document.querySelectorAll('[data-tog]'),function(b){b.onclick=function(){api('POST','/api/sophia/extensions',{id:b.getAttribute('data-tog'),enabled:b.getAttribute('data-on')!=='1'}).then(load)}});
+      Array.prototype.forEach.call(document.querySelectorAll('[data-unin]'),function(b){b.onclick=function(){if(!confirm('Uninstall '+b.getAttribute('data-unin')+'? Your site data is untouched.'))return;api('POST','/api/sophia/extensions/uninstall',{id:b.getAttribute('data-unin')}).then(load)}});
+    })}
+    function install(repo,sub,btn){var old=btn.textContent;btn.disabled=true;btn.textContent='Installing…';$('gimsg').innerHTML='<span style="color:#9fc7d6">Pulling from git&hellip;</span>';
+      api('POST','/api/sophia/extensions/install',{repo:repo,subdir:sub}).then(function(r){btn.disabled=false;btn.textContent=old;
+        if(r&&r.ok){$('gimsg').innerHTML='<span class="ok">Installed '+esc(r.name||r.id)+' v'+esc(r.version)+' &check;</span>';load()}
+        else{$('gimsg').innerHTML='<span style="color:#ff8a8a">'+esc((r&&r.error)||'install failed')+'</span>'}
+      })}
+    $('addseo').onclick=function(){install('Chorozion/SophiaXT-SEO-Suite','extensions/sophia-stack',this)};
+    $('giadd').onclick=function(){var rp=$('girepo').value.trim();if(!rp){$('gimsg').textContent='Enter a repo.';return}install(rp,$('gisub').value.trim(),this)};
+    load();
+  }
 
   // BUILD: describe -> copy prompt -> paste into ANY ai -> paste reply back -> apply.
   // The stack does the editing; the AI only writes the change. No setup, any LLM.
@@ -86,8 +107,8 @@ a{color:#00D4FF}.hide{display:none}code{color:#FF6B35}</style></head>
       +'<div style="flex:1 1 440px;min-width:320px;position:sticky;top:12px">'
       +'<div class="card" style="padding:14px">'
       +'<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px"><h2 style="margin:0">VEX <span style="color:#7d93a8;font-size:12px">live preview</span></h2>'
-      +'<label style="font-size:12px;color:#cfe6f0;cursor:pointer"><input type="checkbox" id="vexprev" style="width:auto;margin-right:5px;vertical-align:middle">Preview before applying</label></div>'
-      +'<div id="vexbar" class="hide" style="margin-bottom:8px;padding:9px 11px;border-radius:9px;background:rgba(0,212,255,.10);border:1px solid rgba(0,212,255,.25);font-size:13px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span id="vexmsg" style="flex:1">Previewing &mdash; not yet live.</span><button id="vexapply" style="padding:5px 12px">Apply to Live Site</button><button id="vexdiscard" class="ghost" style="padding:5px 12px">Discard</button></div>'
+      +'<label style="font-size:12px;color:#cfe6f0;cursor:pointer"><input type="checkbox" id="vexprev" checked style="width:auto;margin-right:5px;vertical-align:middle">Preview before going live</label></div>'
+      +'<div id="vexbar" class="hide" style="margin-bottom:8px;padding:10px 12px;border-radius:10px;background:rgba(0,212,255,.12);border:1px solid rgba(0,212,255,.3);font-size:13px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span id="vexmsg" style="flex:1">Previewing &mdash; not live yet.</span><button id="vexapply" style="padding:7px 16px;font-weight:700">🚀 Push to Live</button><button id="vexdiscard" class="ghost" style="padding:7px 14px">Discard</button></div>'
       +'<iframe id="vexframe" src="/?vex=1" style="width:100%;height:540px;border:1px solid rgba(0,212,255,.18);border-radius:10px;background:#fff"></iframe>'
       +'<div style="font-size:11px;color:#7d93a8;margin-top:6px">Edits land here live as you chat. With <b>Preview</b> on, changes stage here first &mdash; then Apply or Discard.</div>'
       +'</div></div>'
@@ -126,9 +147,10 @@ a{color:#00D4FF}.hide{display:none}code{color:#FF6B35}</style></head>
     function send(){
       var t=$('ask').value.trim(); if(!t){return}
       var prev=$('vexprev').checked;
-      thread.push({role:'user',content:t}); bubble('user',t); $('ask').value=''; $('r').textContent='Sophia is working...'; $('go').disabled=true;
+      thread.push({role:'user',content:t}); bubble('user',t); $('ask').value=''; $('go').disabled=true;
+      var think=document.createElement('div');think.style.cssText='margin:8px 40px 8px 0;padding:9px 12px;border-radius:10px;background:#0c1a28;border:1px solid rgba(0,212,255,.12);font-size:14px;color:#8fb6c8';think.textContent='Sophia is thinking…';$('thread').appendChild(think);$('thread').scrollTop=$('thread').scrollHeight;
       api('POST','/api/sophia/agent',{messages:thread,preview:prev}).then(function(j){
-        $('go').disabled=false; $('r').textContent='';
+        $('go').disabled=false; if(think&&think.parentNode)think.parentNode.removeChild(think);
         if(j&&j.error==='no_llm'){$('needkey').classList.remove('hide');bubble('sophia','I need an AI key first — add one in Settings.');return}
         if(j&&typeof j.reply==='string'){
           thread.push({role:'assistant',content:j.reply});
