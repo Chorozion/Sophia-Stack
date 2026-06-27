@@ -182,7 +182,9 @@ and the **Sophia SEO Suite** installed and active:
 > the base runtime. A contract stub lives at
 > [`examples/extensions/sophia-seo-suite-stub`](examples/extensions/sophia-seo-suite-stub).
 
-**Build one in 15 minutes** — Sophia Stack is community-driven, and extensions are how it grows:
+**Build one in 15 minutes** — Sophia Stack is community-driven, and extensions are how it grows.
+Developers: start with the **[extension developer guide](examples/extensions/README.md)** (everything
+required to build a plugin — manifest, permissions, the `ctx` API, hooks, jobs, publishing).
 
 ```bash
 sophia create-extension my-tool   # scaffolds a working extension (own tab, route, hook, settings)
