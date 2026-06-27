@@ -30,14 +30,26 @@ This roadmap is intentionally honest. Anything not marked ✅ is **not** in the 
 - **`sophia` CLI** — `init · dev · doctor · build · package · template · backup · restore · deploy · ai:*`.
 - **CI/CD** — GitHub Actions for test / build / package / security / release.
 
-## 🚧 In progress / next
+## 🎯 Next major release — v1.5 "Stable"
 
-- **VEX — live preview pane in the builder** — split-screen chat + real-time preview that updates via
-  SSE as you edit, with optimistic preview, changed-element highlighting, and Apply / Discard.
-- **Vector memory for the builder** — semantic retrieval over past edits, templates, and docs to give
-  the AI builder long-term context (optional; off without embeddings).
-- **Sophia SEO Suite** — the first major extension (built in a separate repo against the
-  [extension contract](docs/extensions/sophia-seo-suite-contract.md)).
+**Theme: anybody can be a dev.** Full plan: **[docs/roadmap/v1.5-stable.md](docs/roadmap/v1.5-stable.md)**.
+Headline workstreams (all non-destructive; sensitive ops require login):
+
+- **Intuitive dashboard + first-run onboarding wizard**; Settings split into **Basic + an Advanced toggle**.
+- **Lovable-class live build** — streaming chat + VEX live preview + push-to-live; works with Codex,
+  Claude Code, Grok build, and any provider (in-app and as external agents in VEX).
+- **Safe auto-update** in Settings — auto-pull, logged-in-gated, shows the changelog, **auto-rolls-back
+  on any failure**.
+- **One-click Sophia SEO Suite install** — pulled, verified, auto-installed, non-destructive.
+- **Zip runs out of the box** — self-contained, auto-deploy, onboarding on first boot.
+- **Stack ⇄ SEO Suite sync at 1.5** — ship R3/R4/R5; pinned compatibility matrix; joint release.
+- **Screenshots/GIF** of the whole system working together in both READMEs.
+
+### Already shipped toward 1.5
+- **VEX** live preview pane (split-screen, SSE node-swaps, optimistic preview, Apply/Discard, highlights).
+- **Vector memory** for the builder + real `ai.embed`.
+- **Sophia SEO Suite** — first major extension (separate repo; see the
+  [contract](docs/extensions/sophia-seo-suite-contract.md)).
 
 ## 🔭 Planned
 
