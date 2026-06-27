@@ -7,7 +7,7 @@ import { dirname, join } from "node:path";
 const here = dirname(fileURLToPath(import.meta.url));
 const SUITES = [
   "react-test", "connections-test", "server-test", "mcp-test", "app-test",
-  "pages-test", "pro-test", "recovery-test", "dashboard-test", "agent-test", "providers-test", "extensions-test", "accounts-test", "payments-test", "seo-test", "update-test", "vex-test", "ui-test",
+  "pages-test", "pro-test", "recovery-test", "dashboard-test", "agent-test", "providers-test", "extensions-test", "accounts-test", "payments-test", "seo-test", "update-test", "vex-test", "memory-test", "ui-test",
 ];
 
 let pass = 0, fail = 0;

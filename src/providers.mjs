@@ -27,6 +27,23 @@ export async function callProvider(cfg, messages, tools = []) {
   return adapter(cfg, messages, tools);
 }
 
+// Embeddings — OpenAI-compatible /embeddings (OpenAI, Together, Fireworks, Ollama,
+// LM Studio, vLLM, custom). Returns one vector per input. Throws for providers that
+// don't expose a compatible embeddings endpoint (caller treats that as "no memory").
+export async function embed(cfg, inputs) {
+  const type = normType(cfg.type);
+  if (type !== "openai") throw new Error(`embeddings need an OpenAI-compatible provider (got "${type}")`);
+  const base = (cfg.baseURL || "https://api.openai.com/v1").replace(/\/$/, "");
+  const { ok, status, json } = await postJSON(
+    base + "/embeddings",
+    cfg.apiKey ? { Authorization: "Bearer " + cfg.apiKey } : {},
+    { model: cfg.embedModel || "text-embedding-3-small", input: Array.isArray(inputs) ? inputs : [inputs] },
+    cfg.timeoutMs || 30000,
+  );
+  if (!ok) throw new Error((json.error && json.error.message) || `embeddings error ${status}`);
+  return (json.data || []).map((d) => d.embedding);
+}
+
 async function postJSON(url, headers, body, timeoutMs = 60000) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **VEX — live preview pane**: split-screen builder (chat + a live `/?vex=1` iframe) that updates in
+  real time over the existing `/live` SSE, highlights changed blocks, and supports an optimistic
+  **preview → Apply / Discard** flow (the agent can stage edits against a validated clone without
+  committing). `src/entry-client.jsx`, `src/dashboard.mjs`, agent `preview` mode.
+- **Builder memory (optional vector retrieval)**: a dependency-free vector store (`src/vector-store.mjs`)
+  + `src/memory.mjs` index the catalog, skill, brief, and recent versions; before planning edits the
+  builder retrieves the most relevant context. Real `embed()` for OpenAI-compatible providers (also
+  powers `ctx.ai.embed` for extensions). Off without an embedder. `GET/POST /api/sophia/memory`,
+  `EMBED_*` env.
 - **Self-update + non-destructive auto-migration**: deployments check the public release channel
   (`GET /api/sophia/update`, Settings → Updates banner, `sophia update [--apply]`), and on boot they
   migrate stored data **forward, safely** — backing up state first, running only additive migrations,

@@ -121,7 +121,7 @@ export class ExtensionHost {
         getDefaultProvider: () => { need("ai:use"); return host.deps.aiDefaultProvider(); },
         generate: async (opts) => { need("ai:use"); return host.deps.aiGenerate(opts || {}); },
         stream: async () => { need("ai:use"); throw new Error("sophia.ai.stream() is planned — use ai.generate() for now"); },
-        embed: async () => { need("ai:use"); throw new Error("sophia.ai.embed() is planned"); },
+        embed: async (texts) => { need("ai:use"); return host.deps.aiEmbed(texts); },
       },
       hooks: {
         on: (hook, fn) => { if (!HOOKS.includes(hook)) throw new Error("unknown hook: " + hook); const a = host.hookListeners.get(hook) || []; a.push({ id, fn }); host.hookListeners.set(hook, a); },

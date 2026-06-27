@@ -21,7 +21,9 @@ import { openapiSpec } from "./openapi.mjs";
 import { MediaStore } from "./media-store.mjs";
 import { runFunction } from "./sandbox.mjs";
 import { dashboardPage } from "./dashboard.mjs";
-import { callProvider, resolveProvider, envProviders } from "./providers.mjs";
+import { callProvider, resolveProvider, envProviders, embed } from "./providers.mjs";
+import { Memory, gatherSources } from "./memory.mjs";
+import { SKILL } from "./skill-text.mjs";
 import { ExtensionHost } from "./extensions.mjs";
 import { makeAudit } from "./audit.mjs";
 import { AccountStore } from "./accounts.mjs";
@@ -292,6 +294,7 @@ export async function createServer(opts = {}) {
       const r = await callProvider({ ...llm, temperature: opts.temperature, maxTokens: opts.maxTokens }, messages, []);
       return { text: r.content || "", provider: llm.type };
     },
+    aiEmbed: (texts) => embedFn(texts),
     aiListProviders: () => Object.keys(envProviders()).concat(tokens.llm && tokens.llm.apiKey ? ["dashboard"] : []),
     aiDefaultProvider: () => { const p = resolveProvider(tokens.llm); return p ? { type: p.type, model: p.model || null } : null; },
     getExtSettings: (id) => (tokens.extSettings && tokens.extSettings[id]) || {},
@@ -301,6 +304,19 @@ export async function createServer(opts = {}) {
     audit,
   });
   const extensionsDir = opts.extensionsDir || process.env.SOPHIA_EXTENSIONS_DIR || join(dir, "extensions");
+
+  // ── Builder memory (vector retrieval) — optional; needs an OpenAI-compatible embedder ──
+  const embedProvider = () => {
+    const e = process.env;
+    if (e.EMBED_API_KEY || e.EMBED_BASE_URL) return { type: "openai", apiKey: e.EMBED_API_KEY, baseURL: e.EMBED_BASE_URL, embedModel: e.EMBED_MODEL };
+    const p = resolveProvider(tokens.llm);
+    if (p && ["openai", "openai-compatible", "compatible", "local"].includes(String(p.type || "openai").toLowerCase())) return { ...p, embedModel: e.EMBED_MODEL };
+    if (e.OPENAI_API_KEY) return { type: "openai", apiKey: e.OPENAI_API_KEY, embedModel: e.EMBED_MODEL };
+    return null;
+  };
+  const embedFn = async (texts) => { const ep = embedProvider(); if (!ep) throw new Error("no embedding provider"); return embed(ep, texts); };
+  const memory = new Memory(join(dir, "vectors.json"), embedFn);
+  const buildMemory = () => { let cat = {}; try { cat = JSON.parse(readFileSync(catalogPath, "utf8")); } catch {} return memory.build(gatherSources({ catalog: cat, skill: SKILL, versions: store.versions(), brief: model.brief })); };
 
   const shell = (routePath = route, reqOrigin = "") => {
     const title = model?.pages?.[routePath]?.title || model.site || "Sophia";
@@ -428,6 +444,12 @@ ${CORE_FOOTER}
     if (m === "GET" && p === "/api/sophia/audit") {
       if (!isAdmin(req)) return send(res, 401, { error: "owner only" });
       return send(res, 200, { entries: audit.tail(Number(url.searchParams.get("n")) || 200) });
+    }
+    // Builder memory (vector retrieval): status + rebuild (owner-only; optional feature)
+    if (p === "/api/sophia/memory") {
+      if (!isAdmin(req)) return send(res, 401, { error: "owner only" });
+      if (m === "POST") { const built = await buildMemory(); return send(res, 200, { ...memory.status(), built }); }
+      return send(res, 200, memory.status());
     }
     // Update awareness: is a newer Stack version available? (owner-only; opt-out via env)
     if (m === "GET" && p === "/api/sophia/update") {
@@ -706,7 +728,16 @@ ${CORE_FOOTER}
       const history = (Array.isArray(body.messages) ? body.messages : []).filter((x) => x && (x.role === "user" || x.role === "assistant") && typeof x.content === "string").slice(-20);
       if (!history.length) return send(res, 400, { error: "empty", message: "Tell Sophia what to build." });
       let catalog; try { catalog = JSON.parse(readFileSync(catalogPath, "utf8")); } catch { catalog = { blocks: {}, styles: [] }; }
-      const messages = [{ role: "system", content: agentSystemPrompt(catalog) }, ...history];
+      // Vector memory (optional): retrieve relevant project context for the request.
+      let memHint = "";
+      try {
+        const lastUser = [...history].reverse().find((x) => x.role === "user");
+        if (lastUser && memory.ready) {
+          const hits = await memory.retrieve(lastUser.content, 5);
+          if (hits.length) memHint = "\n\nRelevant context from this project (for grounding — use what helps):\n" + hits.map((h) => "- [" + h.kind + "] " + h.text.slice(0, 160)).join("\n");
+        }
+      } catch {}
+      const messages = [{ role: "system", content: agentSystemPrompt(catalog) + memHint }, ...history];
       const applied = [];
       // VEX preview mode: stage edits against a clone (validated) WITHOUT committing,
       // so the builder can show them optimistically and the owner Applies or Discards.
@@ -858,6 +889,7 @@ ${CORE_FOOTER}
   });
 
   await extHost.loadDir(extensionsDir); // load installed extensions before serving
+  if (embedProvider()) buildMemory().catch(() => {}); // warm the builder's memory index (optional)
 
   return new Promise((resolve) => {
     const onListen = () => {
