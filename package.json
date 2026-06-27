@@ -1,6 +1,6 @@
 {
   "name": "@sophiaxt/sophia-stack",
-  "version": "1.0.0",
+  "version": "1.5.0",
   "description": "Open-source, self-hosted, provider-agnostic AI app builder from SophiaXT Tech. Own your site and operate it with any AI (OpenAI, Anthropic, Gemini, or local) via REST, MCP, and OpenAPI. Extensible, agent-operable, no SaaS lock-in.",
   "type": "module",
   "bin": {

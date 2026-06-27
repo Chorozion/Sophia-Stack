@@ -6,7 +6,8 @@
 // edits the model (/patch) and CSS (/css) in real time. Read endpoints are
 // public; writes need a bearer token; token management needs an admin token.
 import express from "express";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, rmSync, cpSync, existsSync } from "node:fs";
+import net from "node:net";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { ssr } from "../dist/ssr.mjs";
@@ -32,6 +33,9 @@ import { resolvePayments, createCheckout, listProducts, createProduct, verifyWeb
 import { VERSION as STACK_VERSION } from "./version.mjs";
 import { migrate } from "./migrate.mjs";
 import { cachedCheck } from "./updater.mjs";
+import { safeApply, httpHealthCheck } from "./safe-update.mjs";
+import { spawnSync } from "node:child_process";
+import { dirname } from "node:path";
 
 const DEFAULT_CLIENT_JS = fileURLToPath(new URL("../public/client.js", import.meta.url));
 const DEFAULT_CATALOG = fileURLToPath(new URL("../catalog.json", import.meta.url));
@@ -489,6 +493,43 @@ ${CORE_FOOTER}
       const info = await cachedCheck({ force: url.searchParams.get("force") === "1" });
       if (info.updateAvailable) extHost.emit("update.available", { current: info.current, latest: info.latest, releaseUrl: info.releaseUrl });
       return send(res, 200, info);
+    }
+    // In-dashboard "Update now" (owner/logged-in): runs the SAME tested safe engine —
+    // backup → swap → health-check the new boot → AUTO-ROLLBACK on any failure. .sophia-data untouched.
+    if (m === "POST" && p === "/api/sophia/update/apply") {
+      if (!isAdmin(req)) return send(res, 401, { error: "owner only" });
+      const info = await cachedCheck({ force: true });
+      if (info.enabled === false) return send(res, 400, { error: "update checks are disabled" });
+      if (info.error) return send(res, 502, { error: "could not reach the update channel: " + info.error });
+      if (!info.updateAvailable) return send(res, 200, { ok: true, upToDate: true, current: info.current });
+      if (!info.asset) return send(res, 400, { error: "no downloadable release asset; update via `sophia update --apply`" });
+      const installDir = opts.installDir || dirname(dir);
+      if (!existsSync(join(installDir, "app.js"))) return send(res, 400, { error: "self-update needs the packaged app.js; use `sophia update --apply` for source checkouts" });
+      const tmp = join(dir, ".sophia-update");
+      try {
+        rmSync(tmp, { recursive: true, force: true }); mkdirSync(tmp, { recursive: true });
+        const r = await fetch(info.asset.url); if (!r.ok) return send(res, 502, { error: "download failed: HTTP " + r.status });
+        writeFileSync(join(tmp, "rel.zip"), Buffer.from(await r.arrayBuffer()));
+        mkdirSync(join(tmp, "x"), { recursive: true });
+        let t = spawnSync("unzip", ["-o", "rel.zip", "-d", "x"], { cwd: tmp, stdio: "ignore" });
+        if (t.error || t.status !== 0) t = spawnSync("tar", ["-xf", "rel.zip", "-C", "x"], { cwd: tmp, stdio: "ignore" });
+        if (t.error || t.status !== 0) return send(res, 500, { error: "could not extract the release (need unzip or tar)" });
+        const freePort = () => new Promise((rs) => { const s = net.createServer(); s.listen(0, "127.0.0.1", () => { const pn = s.address().port; s.close(() => rs(pn)); }); });
+        const FILES = ["app.js", "catalog.json"];
+        const cp = (from, to) => { for (const f of FILES) if (existsSync(join(from, f))) cpSync(join(from, f), join(to, f)); if (existsSync(join(from, "public"))) cpSync(join(from, "public"), join(to, "public"), { recursive: true }); };
+        const codeBak = join(tmp, "code-backup"), ex = join(tmp, "x");
+        const result = await safeApply({
+          backup: async () => { mkdirSync(codeBak, { recursive: true }); cp(installDir, codeBak); },
+          applyNew: async () => cp(ex, installDir),
+          healthCheck: async () => httpHealthCheck({ cwd: installDir, entry: "app.js", port: await freePort(), timeoutMs: 15000 }),
+          restore: async () => cp(codeBak, installDir),
+        });
+        if (!result.ok) { audit.log("owner", "update.apply", { ok: false, error: result.error, rolledBack: result.rolledBack }); return send(res, 500, { error: result.error, rolledBack: !!result.rolledBack }); }
+        audit.log("owner", "update.apply", { ok: true, to: info.latest });
+        try { const rt = join(installDir, "tmp", "restart.txt"); mkdirSync(dirname(rt), { recursive: true }); writeFileSync(rt, new Date().toISOString()); } catch {} // Passenger auto-restart
+        return send(res, 200, { ok: true, updated: true, latest: info.latest, changelog: info.notes || "", note: "Updated + health-checked. Restart to finish (Passenger auto-restarts; pm2/systemd: restart the service). Your data is untouched and auto-migrates on boot." });
+      } catch (e) { return send(res, 500, { error: String(e.message || e) }); }
+      finally { try { rmSync(tmp, { recursive: true, force: true }); } catch {} }
     }
 
     // ── End-user accounts (site visitors sign up / log in here) ──

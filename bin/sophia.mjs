@@ -32,6 +32,7 @@ function dataDir() { return join(CWD, ".sophia-data"); }
 const HELP = `${c.cyan("sophia")} — Sophia Stack CLI
 
 ${c.gray("Project (run inside the repo / a clone):")}
+  sophia start               run it + open your browser (one command, out of the box)
   sophia doctor              check your environment
   sophia build               build SSR + client bundles + catalog
   sophia package             produce the deployable artifact in package/
@@ -156,6 +157,33 @@ function createExtension(name) {
   console.log("  Develop:  " + c.cyan(`SOPHIA_EXTENSIONS_DIR="$(pwd)" sophia dev`) + c.gray("   (or copy into a deployment's .sophia-data/extensions/)"));
   console.log("  Publish:  push to a " + c.cyan("public git repo") + " → users install it in one click from the Extensions tab.");
   console.log("  Docs:     " + c.gray("docs/extensions/  ·  examples/extensions/hello-extension"));
+}
+
+function openBrowser(url) {
+  try {
+    if (process.platform === "win32") spawnSync("cmd", ["/c", "start", "", url], { stdio: "ignore" });
+    else spawnSync(process.platform === "darwin" ? "open" : "xdg-open", [url], { stdio: "ignore" });
+  } catch {}
+}
+async function start() {
+  loadEnv();
+  const net = await import("node:net");
+  const freePort = () => new Promise((r) => { const s = net.createServer(); s.listen(0, () => { const p = s.address().port; s.close(() => r(p)); }); });
+  const port = process.env.PORT || (await freePort());
+  const url = "http://localhost:" + port + "/";
+  if (existsSync(join(CWD, "app.js"))) {
+    ok("starting Sophia Stack → " + c.cyan(url));
+    console.log(c.gray("  first run? it opens the setup + onboarding wizard. Ctrl+C to stop."));
+    setTimeout(() => openBrowser(url), 1800);
+    const r = spawnSync(NODE, ["app.js"], { stdio: "inherit", cwd: CWD, env: { ...process.env, PORT: String(port) } });
+    process.exit(r.status || 0);
+  }
+  // In a source checkout: run the dev server (builds on the fly).
+  needDeps();
+  ok("starting a dev server → " + c.cyan(url));
+  process.env.PORT = String(port);
+  setTimeout(() => openBrowser(url), 2200);
+  runScript("dev.mjs");
 }
 
 function backup() {
@@ -283,6 +311,7 @@ async function applyUpdate(u) {
 
 if (cmd === "ai" || (cmd && cmd.startsWith("ai:"))) { await aiCmd(cmd.startsWith("ai:") ? cmd.slice(3) : argv[1]); process.exit(0); }
 if (cmd === "update") { await updateCmd(argv.slice(1)); process.exit(0); }
+if (cmd === "start") { await start(); process.exit(0); }
 
 switch (cmd) {
   case "doctor": doctor(); break;

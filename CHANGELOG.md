@@ -6,7 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-06-27
+
+The **"anybody can be a dev"** release: a guided, intuitive builder with a Lovable-style live preview,
+a community extension ecosystem, safe one-click updates, and run-anywhere packaging — all
+non-destructive and self-hosted. 235 tests across 22 suites.
+
 ### Added
+- **In-dashboard "Update now"** (Settings → Updates): runs the tested safe engine (backup → swap →
+  health-check → **auto-rollback** on failure), shows the changelog; `.sophia-data` is untouched.
+  Logged-in-gated. `POST /api/sophia/update/apply`.
+- **`sophia start`**: one command to run it and open your browser (out-of-the-box launcher).
 - **Community extensions**: `sophia create-extension <name>` scaffolds a working extension (own tab,
   route, hook, settings) in seconds; a [Build your first extension](docs/extensions/build-your-first.md)
   guide + CONTRIBUTING section invite community plugins (publish to a public repo → one-click install).
@@ -110,5 +120,6 @@ First public, open-source release. Relicensed to **Apache-2.0**.
 - `SameSite=Lax` session cookies; CORS that does not bypass auth.
 - No secrets, keys, or machine paths committed; live URL + internal endpoint scrubbed from history.
 
-[Unreleased]: https://github.com/Chorozion/Sophia-Stack/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/Chorozion/Sophia-Stack/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/Chorozion/Sophia-Stack/compare/v1.0.0...v1.5.0
 [1.0.0]: https://github.com/Chorozion/Sophia-Stack/releases/tag/v1.0.0
