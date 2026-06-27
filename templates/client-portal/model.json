@@ -1,0 +1,36 @@
+{
+  "site": "Northstar Studio",
+  "style": "soft",
+  "data": {
+    "collections": {
+      "updates": {
+        "fields": [{ "name": "title" }, { "name": "body" }],
+        "access": { "create": "token", "read": "public" }
+      },
+      "messages": {
+        "fields": [{ "name": "name" }, { "name": "body" }],
+        "access": { "create": "public", "read": "token" }
+      }
+    }
+  },
+  "pages": {
+    "/": {
+      "title": "Northstar Studio — Client Portal",
+      "blocks": [
+        { "id": "nav", "type": "nav", "brand": "Northstar Studio", "links": ["Updates", "Files", "Invoices", "Message us"] },
+        { "id": "hero", "type": "hero", "fx": ["reveal-up", "soft-shadow"], "kicker": "Client Portal", "headline": "Welcome back", "sub": "Your project home base. Catch up on the latest updates, grab your deliverables, review invoices, and send us a note — all in one calm, private place.", "cta": { "label": "See recent updates", "href": "#updates" } },
+        { "id": "sections", "type": "features", "items": [
+          { "t": "Project updates", "d": "Every milestone, decision, and next step — posted here as we go so you always know exactly where your project stands." },
+          { "t": "Files", "d": "Logos, source files, drafts, and final deliverables, organized and ready to download whenever you need them." },
+          { "t": "Invoices", "d": "View and pay invoices, see what's outstanding, and download receipts for your records — no chasing emails." }
+        ] },
+        { "id": "updates", "type": "html",
+          "html": "<section class=\"cp-wrap\" id=\"updates\"><div class=\"cp-inner\"><h2>Recent updates</h2><p class=\"cp-lede\">The latest from your Northstar team.</p><div id=\"cp-list\" class=\"cp-list\" aria-live=\"polite\"><p class=\"cp-loading\">Loading updates…</p></div><div class=\"cp-msgbox\"><h3>Leave a message</h3><p>Have a question or a change request? Drop us a note and we'll get back to you.</p><form id=\"cp-form\" novalidate><label>Your name<input id=\"cp-name\" name=\"name\" type=\"text\" autocomplete=\"name\" placeholder=\"Jordan Ellis\" required /></label><label>Message<textarea id=\"cp-body\" name=\"body\" rows=\"4\" placeholder=\"How can we help?\" required></textarea></label><button id=\"cp-submit\" type=\"submit\">Send message</button></form><p id=\"cp-msg\" class=\"cp-msg\" role=\"status\" aria-live=\"polite\"></p></div></div></section>",
+          "css": ".cp-wrap{padding:64px 20px;display:flex;justify-content:center}.cp-inner{width:100%;max-width:760px}.cp-inner h2{margin:0 0 6px;font-size:1.7rem}.cp-lede{margin:0 0 28px;opacity:.7}.cp-list{display:flex;flex-direction:column;gap:14px;margin:0 0 48px}.cp-item{padding:20px 22px;border-radius:14px;background:#fff;border:1px solid rgba(0,0,0,.07);box-shadow:0 4px 18px rgba(0,0,0,.04)}.cp-item h4{margin:0 0 6px;font-size:1.1rem}.cp-item p{margin:0;opacity:.78;line-height:1.55;font-size:.95rem}.cp-empty{margin:0 0 4px;opacity:.6;font-size:.9rem}.cp-loading{opacity:.6}.cp-msgbox{padding:32px;border-radius:18px;background:#fff;border:1px solid rgba(0,0,0,.07);box-shadow:0 6px 24px rgba(0,0,0,.05)}.cp-msgbox h3{margin:0 0 6px;font-size:1.3rem}.cp-msgbox>p{margin:0 0 22px;opacity:.72;font-size:.95rem}.cp-msgbox form{display:flex;flex-direction:column;gap:16px}.cp-msgbox label{display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:.9rem}.cp-msgbox input,.cp-msgbox textarea{padding:12px 14px;border:1px solid rgba(0,0,0,.16);border-radius:10px;font-size:1rem;font-weight:400;font-family:inherit;background:#fafafa;resize:vertical}.cp-msgbox button{margin-top:4px;padding:14px 22px;border:0;border-radius:10px;font-size:1rem;font-weight:600;cursor:pointer;background:#1f2937;color:#fff}.cp-msgbox button:disabled{opacity:.6;cursor:default}.cp-msg{margin:16px 0 0;min-height:1.2em;font-weight:600}.cp-msg.ok{color:#15803d}.cp-msg.err{color:#b91c1c}",
+          "js": "(function(){function esc(s){return String(s==null?'':s).replace(/[&<>\"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c];});}var list=document.getElementById('cp-list');function item(u){return '<article class=\"cp-item\"><h4>'+esc(u.title||'Update')+'</h4><p>'+esc(u.body||'')+'</p></article>';}var samples=[{title:'Homepage redesign — first drafts ready',body:'We\\u2019ve uploaded three homepage directions to your Files. Take a look and let us know which feels most like you.'},{title:'Kickoff recap & timeline',body:'Thanks for a great kickoff! The full project timeline and milestone dates are now posted. First review is set for next Thursday.'},{title:'Brand assets delivered',body:'Your logo pack, color palette, and type system are finalized and available to download. Source files included.'}];function render(items){if(!list)return;if(!items||!items.length){list.innerHTML='<p class=\"cp-empty\">No updates yet — here\\u2019s a preview of what they\\u2019ll look like.</p>'+samples.map(item).join('');return;}list.innerHTML=items.map(item).join('');}if(list){fetch('/api/data/updates').then(function(r){if(!r.ok)throw new Error('bad status');return r.json();}).then(function(d){var items=Array.isArray(d)?d:(d&&d.records)?d.records:(d&&d.data)?d.data:[];render(items);}).catch(function(){render([]);});}var f=document.getElementById('cp-form');if(!f)return;var nameEl=document.getElementById('cp-name');var bodyEl=document.getElementById('cp-body');var btn=document.getElementById('cp-submit');var msg=document.getElementById('cp-msg');f.addEventListener('submit',function(e){e.preventDefault();var name=(nameEl.value||'').trim();var body=(bodyEl.value||'').trim();msg.className='cp-msg';if(!name||!body){msg.textContent='Please add your name and a message.';msg.className='cp-msg err';return;}btn.disabled=true;var orig=btn.textContent;btn.textContent='Sending…';fetch('/api/data/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,body:body})}).then(function(r){if(!r.ok)throw new Error('bad status');return r.json();}).then(function(){f.reset();msg.textContent='Thanks! Your message is in — we\\u2019ll reply by email soon.';msg.className='cp-msg ok';btn.textContent=orig;btn.disabled=false;}).catch(function(){msg.textContent='Something went wrong. Please try again.';msg.className='cp-msg err';btn.textContent=orig;btn.disabled=false;});});})();"
+        },
+        { "id": "foot", "type": "footer", "text": "© Northstar Studio · Private client portal · support@northstar.example · Sign out" }
+      ]
+    }
+  }
+}

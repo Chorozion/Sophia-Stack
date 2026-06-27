@@ -1,0 +1,10 @@
+{
+  "name": "AI Chatbot Site",
+  "slug": "ai-chatbot-site",
+  "description": "A landing page for an AI assistant product with a working in-page demo chat powered by a sandboxed server function (/api/fn/chat).",
+  "category": "content",
+  "style": "neon",
+  "tags": ["ai", "chatbot", "assistant", "saas", "functions"],
+  "screenshot": "screenshot.png",
+  "prompt": "Build a landing page for an AI assistant product called <product>: a nav, a hero, a features section with three capabilities, a working demo chat widget whose script POSTs {message} to a server function at /api/fn/chat and shows the reply, and a footer. Define the chat function in the model."
+}

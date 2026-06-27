@@ -57,11 +57,11 @@ committing — the model must return `{ok:true}` from `src/validate.mjs`. `scree
 | `local-service-business` | business | ✅ |
 | `lead-capture` | marketing + data | ✅ |
 | `booking-site` | business + data | ✅ |
-| `knowledge-base` | content | 🔭 planned |
-| `crm-dashboard` | internal | 🔭 planned |
-| `client-portal` | internal | 🔭 planned |
-| `internal-tool` | internal | 🔭 planned |
-| `inventory-tracker` | data | 🔭 planned |
-| `ai-chatbot-site` | content | 🔭 planned |
+| `knowledge-base` | content | ✅ |
+| `crm-dashboard` | internal | ✅ |
+| `client-portal` | internal | ✅ |
+| `internal-tool` | internal | ✅ |
+| `inventory-tracker` | data | ✅ |
+| `ai-chatbot-site` | content | ✅ |
 
-Planned templates are tracked in [ROADMAP.md](../ROADMAP.md) — contributions welcome.
+All 10 templates ship validated. More ideas? Open a feature request or see [ROADMAP.md](../ROADMAP.md).

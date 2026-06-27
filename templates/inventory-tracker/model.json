@@ -1,0 +1,31 @@
+{
+  "site": "Stockroom",
+  "style": "dark-tech",
+  "data": {
+    "collections": {
+      "items": {
+        "fields": [{ "name": "sku" }, { "name": "name" }, { "name": "quantity" }, { "name": "price" }],
+        "access": { "create": "public", "read": "public" }
+      }
+    }
+  },
+  "pages": {
+    "/": {
+      "title": "Stockroom — Inventory Tracker",
+      "blocks": [
+        { "id": "nav", "type": "nav", "brand": "Stockroom", "links": ["Inventory", "Orders", "Suppliers", "Settings"] },
+        { "id": "stats", "type": "stats", "items": [
+          { "v": "124", "l": "SKUs" },
+          { "v": "7", "l": "Low stock" },
+          { "v": "$48k", "l": "Value" }
+        ] },
+        { "id": "items", "type": "html",
+          "html": "<section class=\"inv-wrap\"><div class=\"inv-head\"><h2>Inventory</h2><p>Current stock on hand. Add an item below and it'll appear in the table instantly.</p></div><div class=\"inv-grid\"><div class=\"inv-tablecard\"><table class=\"inv-table\"><thead><tr><th>SKU</th><th>Name</th><th class=\"num\">Qty</th><th class=\"num\">Price</th></tr></thead><tbody id=\"inv-rows\"><tr><td colspan=\"4\" class=\"inv-empty\">Loading inventory…</td></tr></tbody></table></div><form id=\"inv-form\" class=\"inv-form\" novalidate><h3>Add item</h3><label>SKU<input id=\"inv-sku\" name=\"sku\" type=\"text\" placeholder=\"WID-001\" required /></label><label>Name<input id=\"inv-name\" name=\"name\" type=\"text\" placeholder=\"Widget, large\" required /></label><label>Quantity<input id=\"inv-qty\" name=\"quantity\" type=\"number\" min=\"0\" step=\"1\" placeholder=\"50\" required /></label><label>Price<input id=\"inv-price\" name=\"price\" type=\"number\" min=\"0\" step=\"0.01\" placeholder=\"12.50\" required /></label><button id=\"inv-submit\" type=\"submit\">Add item</button><p id=\"inv-msg\" class=\"inv-msg\" role=\"status\" aria-live=\"polite\"></p></form></div></section>",
+          "css": ".inv-wrap{max-width:1080px;margin:0 auto;padding:48px 20px}.inv-head h2{margin:0 0 6px;font-size:1.7rem}.inv-head p{margin:0 0 28px;opacity:.7}.inv-grid{display:grid;grid-template-columns:1fr 320px;gap:24px;align-items:start}@media(max-width:780px){.inv-grid{grid-template-columns:1fr}}.inv-tablecard{border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(255,255,255,.03);overflow:hidden}.inv-table{width:100%;border-collapse:collapse;font-size:.94rem}.inv-table th,.inv-table td{text-align:left;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.08)}.inv-table th.num,.inv-table td.num{text-align:right;font-variant-numeric:tabular-nums}.inv-table th{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;opacity:.6;font-weight:600}.inv-table tr:last-child td{border-bottom:0}.inv-table td.low{color:#fbbf24;font-weight:600}.inv-empty{text-align:center;opacity:.6;padding:28px 16px}.inv-form{border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(255,255,255,.03);padding:24px;display:flex;flex-direction:column;gap:14px}.inv-form h3{margin:0 0 4px;font-size:1.1rem}.inv-form label{display:flex;flex-direction:column;gap:6px;font-size:.82rem;font-weight:600;opacity:.9}.inv-form input{padding:11px 13px;border-radius:9px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.3);color:inherit;font-size:.95rem}.inv-form button{margin-top:4px;padding:13px 18px;border:0;border-radius:10px;font-weight:600;font-size:.95rem;cursor:pointer;background:linear-gradient(135deg,#6366f1,#22d3ee);color:#06070d}.inv-form button:disabled{opacity:.6;cursor:default}.inv-msg{margin:2px 0 0;min-height:1.1em;font-size:.85rem;font-weight:600}.inv-msg.ok{color:#34d399}.inv-msg.err{color:#fb7185}",
+          "js": "(function(){var SAMPLE=[{sku:'WID-001',name:'Widget, large',quantity:48,price:12.5},{sku:'BOLT-204',name:'Hex bolt M8 (100pk)',quantity:6,price:8.75},{sku:'CBL-USB-C',name:'USB-C cable, 2m',quantity:130,price:5.2}];var rows=document.getElementById('inv-rows');function esc(s){return String(s==null?'':s).replace(/[&<>\"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',\"'\":'&#39;'}[c];});}function money(p){var n=Number(p);return isNaN(n)?esc(p):'$'+n.toFixed(2);}function qtyCell(q){var n=Number(q);var low=!isNaN(n)&&n<=10;return '<td class=\"num'+(low?' low':'')+'\">'+esc(q)+'</td>';}function render(list){if(!list||!list.length){rows.innerHTML='<tr><td colspan=\"4\" class=\"inv-empty\">No items yet — add your first SKU.</td></tr>';return;}rows.innerHTML=list.map(function(i){return '<tr><td>'+esc(i.sku)+'</td><td>'+esc(i.name)+'</td>'+qtyCell(i.quantity)+'<td class=\"num\">'+money(i.price)+'</td></tr>';}).join('');}function load(){fetch('/api/data/items').then(function(r){return r.ok?r.json():null;}).then(function(d){var list=d&&(d.records||d.items||d.data||(Array.isArray(d)?d:null));if(!list||!list.length){render(SAMPLE);}else{render(list);}}).catch(function(){render(SAMPLE);});}var f=document.getElementById('inv-form');var btn=document.getElementById('inv-submit');var msg=document.getElementById('inv-msg');f.addEventListener('submit',function(e){e.preventDefault();var sku=(document.getElementById('inv-sku').value||'').trim();var name=(document.getElementById('inv-name').value||'').trim();var quantity=(document.getElementById('inv-qty').value||'').trim();var price=(document.getElementById('inv-price').value||'').trim();msg.className='inv-msg';if(!sku||!name){msg.textContent='SKU and name are required.';msg.className='inv-msg err';return;}btn.disabled=true;var orig=btn.textContent;btn.textContent='Adding…';fetch('/api/data/items',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sku:sku,name:name,quantity:quantity,price:price})}).then(function(r){if(!r.ok)throw new Error('bad');return r.json();}).then(function(){f.reset();msg.textContent='Item added.';msg.className='inv-msg ok';btn.textContent=orig;btn.disabled=false;load();}).catch(function(){msg.textContent='Something went wrong. Please try again.';msg.className='inv-msg err';btn.textContent=orig;btn.disabled=false;});});load();})();"
+        },
+        { "id": "foot", "type": "footer", "text": "© Stockroom · Inventory tracker · Internal use only" }
+      ]
+    }
+  }
+}

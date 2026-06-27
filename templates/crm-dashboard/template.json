@@ -1,0 +1,10 @@
+{
+  "name": "CRM Dashboard",
+  "slug": "crm-dashboard",
+  "description": "A simple internal CRM (\"Pipeline\"): pipeline stats, a live contacts table fetched from the data API with an add-contact form, all in a dark-tech dashboard shell.",
+  "category": "internal",
+  "style": "dark-tech",
+  "tags": ["internal", "crm", "dashboard", "data", "sales"],
+  "screenshot": "screenshot.png",
+  "prompt": "Build a simple internal CRM dashboard called <name>: a top nav, a stats row (leads, pipeline value, win rate), a contacts table fetched from the contacts collection with columns for name, company, email, and status, an add-contact form that POSTs new rows and refreshes the table, and a footer."
+}

@@ -1,0 +1,10 @@
+{
+  "name": "Client Portal",
+  "slug": "client-portal",
+  "description": "A portal landing for an agency's clients: hero, three portal sections (updates, files, invoices), a live recent-updates list, and a 'leave a message' form — both wired to the data API.",
+  "category": "internal",
+  "style": "soft",
+  "tags": ["portal", "agency", "clients", "data", "internal"],
+  "screenshot": "screenshot.png",
+  "prompt": "Build a client portal landing for <agency>: a nav, a 'Welcome back' hero, a features section with three sections (Project updates, Files, Invoices), a recent-updates list that fetches from the updates collection (with samples when empty), a 'leave a message' form that POSTs to the messages collection, and a footer."
+}

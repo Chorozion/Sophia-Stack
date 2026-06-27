@@ -1,0 +1,10 @@
+{
+  "name": "Knowledge Base",
+  "slug": "knowledge-base",
+  "description": "A help / docs center for a product: hero search prompt, three help categories, and a live article list backed by the data API (token to write, public to read).",
+  "category": "content",
+  "style": "editorial",
+  "tags": ["help", "docs", "support", "content", "data"],
+  "screenshot": "screenshot.png",
+  "prompt": "Build a help center for <product>: a nav, a 'How can we help?' hero, a features section with three help categories (Getting Started, Guides, FAQ) each with a real description, an article list that fetches from the articles collection and renders article cards (with sample articles shown when empty), and a footer."
+}

@@ -1,0 +1,10 @@
+{
+  "name": "Internal Tool",
+  "slug": "internal-tool",
+  "description": "An internal request tracker (\"Ops Desk\") where staff submit operational requests and see the open queue — a submit form plus a live list, all in a no-nonsense brutalist shell.",
+  "category": "internal",
+  "style": "brutalist",
+  "tags": ["internal", "tool", "tracker", "data", "ops"],
+  "screenshot": "screenshot.png",
+  "prompt": "Build an internal request tracker called <name>: a top nav, a short functional hero, a submit form with title, requester, and priority that POSTs to the requests collection, a live table of open requests fetched from it that refreshes after each submit, and a footer."
+}

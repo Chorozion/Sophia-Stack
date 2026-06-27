@@ -1,0 +1,32 @@
+{
+  "site": "Helpdesk",
+  "style": "editorial",
+  "data": {
+    "collections": {
+      "articles": {
+        "fields": [{ "name": "title" }, { "name": "category" }, { "name": "body" }],
+        "access": { "create": "token", "read": "public" }
+      }
+    }
+  },
+  "pages": {
+    "/": {
+      "title": "Helpdesk — Help Center",
+      "blocks": [
+        { "id": "nav", "type": "nav", "brand": "Helpdesk", "links": ["Getting Started", "Guides", "FAQ", "Contact"] },
+        { "id": "hero", "type": "hero", "fx": ["reveal-up"], "kicker": "Help Center", "headline": "How can we help?", "sub": "Search our guides, walkthroughs, and answers — or browse the latest articles below. Everything you need to get the most out of Helpdesk, written by the people who build it.", "cta": { "label": "Browse articles", "href": "#articles" } },
+        { "id": "categories", "type": "features", "items": [
+          { "t": "Getting Started", "d": "New to Helpdesk? Set up your account, invite your team, and connect your first inbox in under ten minutes with our step-by-step onboarding guides." },
+          { "t": "Guides", "d": "Go deeper on workflows, automations, integrations, and reporting. Practical, task-focused walkthroughs for getting real work done." },
+          { "t": "FAQ", "d": "Quick answers to the questions we hear most — billing, permissions, data exports, and troubleshooting the issues that come up day to day." }
+        ] },
+        { "id": "articles", "type": "html",
+          "html": "<section class=\"kb-wrap\" id=\"articles\"><div class=\"kb-inner\"><h2>Latest articles</h2><p class=\"kb-lede\">The most recent help articles, fresh from our team.</p><div id=\"kb-list\" class=\"kb-grid\" aria-live=\"polite\"><p class=\"kb-loading\">Loading articles…</p></div></div></section>",
+          "css": ".kb-wrap{padding:64px 20px;display:flex;justify-content:center}.kb-inner{width:100%;max-width:980px}.kb-inner h2{margin:0 0 6px;font-size:1.8rem}.kb-lede{margin:0 0 32px;opacity:.7}.kb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px}.kb-card{padding:24px;border:1px solid rgba(0,0,0,.12);border-radius:8px;background:#fff;transition:box-shadow .2s}.kb-card:hover{box-shadow:0 6px 24px rgba(0,0,0,.08)}.kb-cat{display:inline-block;margin:0 0 10px;font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.55}.kb-card h3{margin:0 0 8px;font-size:1.15rem;line-height:1.3}.kb-card p{margin:0;opacity:.78;font-size:.95rem;line-height:1.55}.kb-loading{opacity:.6}.kb-grid .kb-empty{grid-column:1/-1;margin:0 0 4px;opacity:.6;font-size:.9rem}",
+          "js": "(function(){var list=document.getElementById('kb-list');if(!list)return;function esc(s){return String(s==null?'':s).replace(/[&<>\"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c];});}function card(a){return '<article class=\"kb-card\"><span class=\"kb-cat\">'+esc(a.category||'Article')+'</span><h3>'+esc(a.title||'Untitled')+'</h3><p>'+esc((a.body||'').slice(0,160))+((a.body||'').length>160?'…':'')+'</p></article>';}var samples=[{category:'Getting Started',title:'Setting up your first inbox',body:'Connect an email address or shared mailbox so your team can start replying to customers from one place. Takes about five minutes.'},{category:'Guides',title:'Automate replies with rules',body:'Use rules to tag, route, and auto-respond to common requests so your team spends time on the conversations that matter.'},{category:'FAQ',title:'How do I export my data?',body:'You can export conversations and contacts as CSV at any time from Settings → Data. Exports include every field on the record.'}];function render(items){if(!items||!items.length){list.innerHTML='<p class=\"kb-empty\">No articles published yet — here are a few examples of what they look like.</p>'+samples.map(card).join('');return;}list.innerHTML=items.map(card).join('');}fetch('/api/data/articles').then(function(r){if(!r.ok)throw new Error('bad status');return r.json();}).then(function(d){var items=Array.isArray(d)?d:(d&&d.records)?d.records:(d&&d.data)?d.data:[];render(items);}).catch(function(){render([]);});})();"
+        },
+        { "id": "foot", "type": "footer", "text": "© Helpdesk · Still stuck? Email support@helpdesk.example · Status · Changelog" }
+      ]
+    }
+  }
+}

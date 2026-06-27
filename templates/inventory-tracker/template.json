@@ -1,0 +1,10 @@
+{
+  "name": "Inventory Tracker",
+  "slug": "inventory-tracker",
+  "description": "A stock-tracking dashboard (\"Stockroom\"): inventory stats, a live items table fetched from the data API with an add-item form, all in a dark-tech shell.",
+  "category": "data",
+  "style": "dark-tech",
+  "tags": ["inventory", "stock", "dashboard", "data", "internal"],
+  "screenshot": "screenshot.png",
+  "prompt": "Build a stock-tracking dashboard called <name>: a top nav, a stats row (SKUs, low stock, total value), an items table fetched from the items collection with columns for SKU, name, quantity, and price, an add-item form that POSTs new rows and refreshes the table, and a footer."
+}
