@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Community extensions**: `sophia create-extension <name>` scaffolds a working extension (own tab,
+  route, hook, settings) in seconds; a [Build your first extension](docs/extensions/build-your-first.md)
+  guide + CONTRIBUTING section invite community plugins (publish to a public repo → one-click install).
+- **Competitive analysis** (`docs/competitive-analysis.md`): honest positioning vs Lovable/Base44/Bolt/
+  WordPress/headless CMS/Webflow — the differentiation and the defensible wedge.
 - **Streaming build chat (Lovable-style)**: the builder now streams the agent's reply **token-by-token**
   with live "editing your site…/styling…" steps. `callProviderStream` (OpenAI-compatible SSE; graceful
   fallback for others) + `POST /api/sophia/agent/stream` + a streaming dashboard consumer.

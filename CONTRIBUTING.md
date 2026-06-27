@@ -67,3 +67,20 @@ issues for exploitable problems.
 
 By contributing, you agree your contributions are licensed under the project's
 [Apache-2.0](LICENSE) license.
+
+## Contribute an extension (community plugins)
+
+Sophia Stack grows through community extensions. To build one:
+
+```bash
+sophia create-extension my-tool   # scaffolds a working extension
+```
+
+See **[docs/extensions/build-your-first.md](docs/extensions/build-your-first.md)**. Extensions are
+permission-scoped and edit the site only through the validated patch pipeline (never directly), so they
+can't corrupt a site. Publish to a public git repo and anyone installs it in one click from the
+**Extensions** tab.
+
+**Share it:** open a PR adding a one-line entry (name · repo · what it does) to a community list, or
+just post your repo. Ideas: analytics, forms/CRM, blog/CMS, image optimization, i18n, A/B testing,
+search, backups, comments, e-commerce, integrations. The **Sophia SEO Suite** is the first major example.

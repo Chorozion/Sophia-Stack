@@ -160,8 +160,17 @@ and every action is **audited**.
 > the base runtime. A contract stub lives at
 > [`examples/extensions/sophia-seo-suite-stub`](examples/extensions/sophia-seo-suite-stub).
 
-Start from the working [`hello-extension`](examples/extensions/hello-extension) example, and read
-**[docs/extensions/overview.md](docs/extensions/overview.md)**.
+**Build one in 15 minutes** — Sophia Stack is community-driven, and extensions are how it grows:
+
+```bash
+sophia create-extension my-tool   # scaffolds a working extension (own tab, route, hook, settings)
+```
+
+Then publish it to a public git repo and anyone installs it in one click. Start with
+**[Build your first extension](docs/extensions/build-your-first.md)**, the working
+[`hello-extension`](examples/extensions/hello-extension), and
+**[docs/extensions/overview.md](docs/extensions/overview.md)**. PRs that add your extension to the
+community list are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Safety & security
 
@@ -183,7 +192,8 @@ recovery phrase, keep tokens private, and back up `.sophia-data`. The function s
 - **AI agents:** [REST](docs/ai-agents/rest.md) · [MCP](docs/ai-agents/mcp.md) · [OpenAPI](docs/ai-agents/openapi.md) · [Claude Code](docs/ai-agents/claude-code.md) · [Cursor](docs/ai-agents/cursor.md) · [ChatGPT Actions](docs/ai-agents/chatgpt-actions.md)
 - **Platform:** [site model](docs/platform/site-model.md) · [patch API](docs/platform/patch-api.md) · [data layer](docs/platform/data-layer.md) · [server functions](docs/platform/server-functions.md) · [themes](docs/platform/themes.md) · [templates](docs/platform/templates.md)
 - **Members & payments:** [accounts](docs/platform/accounts.md) · [Stripe (your own)](docs/payments/stripe.md)
-- **Extensions:** [overview](docs/extensions/overview.md) · [manifest](docs/extensions/manifest.md) · [permissions](docs/extensions/permissions.md) · [hooks](docs/extensions/hooks.md) · [safe patching](docs/extensions/safe-patching.md)
+- **Extensions:** [build your first](docs/extensions/build-your-first.md) · [overview](docs/extensions/overview.md) · [manifest](docs/extensions/manifest.md) · [permissions](docs/extensions/permissions.md) · [hooks](docs/extensions/hooks.md) · [safe patching](docs/extensions/safe-patching.md)
+- **Positioning:** [competitive analysis](docs/competitive-analysis.md) — how Sophia Stack compares to Lovable/Base44/WordPress/etc.
 - **Security:** [production checklist](docs/security/production-checklist.md) · [key management](docs/security/key-management.md) · [threat model](docs/security/threat-model.md)
 
 ## Roadmap

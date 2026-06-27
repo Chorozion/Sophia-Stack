@@ -47,6 +47,7 @@ ${c.gray("AI providers (provider-agnostic — OpenAI/Anthropic/Gemini/local/cust
 ${c.gray("Templates:")}
   sophia template list       list available starter templates
   sophia template create <slug>   seed ./.sophia-data with a template's model
+  sophia create-extension <name>  scaffold a new extension/plugin to develop
 
 ${c.gray("Deployment data (run next to a deployment's .sophia-data):")}
   sophia backup [--out FILE]      back up ./.sophia-data to a .tgz
@@ -113,6 +114,48 @@ function init(dir) {
   cpSync(join(REPO, "package"), target, { recursive: true });
   ok(`created ${dir}/ — a deployable Sophia Stack.`);
   console.log("\nNext:\n  cd " + dir + "\n  node app.js          " + c.gray("# local: http://localhost:3000") + "\n  " + c.gray("…or upload this folder to your host (start file: app.js, Node 18+).") + "\n  " + c.gray("Deploy guides: docs/deploy/"));
+}
+
+function extTemplate(name, id) {
+  return [
+    "// " + name + " — a Sophia Stack extension. Built with: https://github.com/Chorozion/Sophia-Stack",
+    "// See docs/extensions/ for the full API. Everything you touch is permission-scoped + safe.",
+    "export default {",
+    "  async activate(ctx) {",
+    "    ctx.logger.info('activating');",
+    "    // A setting the site owner can configure.",
+    "    ctx.settings.register({ greeting: { type: 'string', default: 'Hello from " + name + "!' } });",
+    "    // Your own tab in the dashboard (rendered from the panel route below).",
+    "    ctx.admin.registerNav({ label: '" + name + "', path: '/admin/extensions/" + id + "', icon: 'box' });",
+    "    ctx.admin.registerPanel({ label: '" + name + "', path: 'panel' });",
+    "    ctx.routes.register('/panel', async (req, res) => {",
+    "      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });",
+    "      res.end('<!doctype html><meta charset=\"utf-8\"><body style=\"font-family:system-ui;background:#0a1628;color:#e8f4f8;padding:24px\"><h1 style=\"color:#00D4FF\">" + name + "</h1><p>' + (ctx.settings.get('greeting') || '') + '</p><p>Edit <code>extension.js</code> to build your tools here.</p></body>');",
+    "    });",
+    "    // A JSON API route (auth is yours to decide via helpers.isAdmin / helpers.hasToken).",
+    "    ctx.routes.register('/ping', async (req, res, h) => h.send(res, 200, { ok: true, site: ctx.site.read().site }));",
+    "    // React to site changes (the safe way — never mutate the model directly).",
+    "    ctx.hooks.on('page.afterSave', () => ctx.audit.log('saw-edit', null));",
+    "  },",
+    "  async deactivate(ctx) { ctx.logger.info('deactivating'); },",
+    "};",
+    "",
+  ].join("\n");
+}
+function createExtension(name) {
+  if (!name) die("name your extension", "sophia create-extension my-extension");
+  const id = String(name).toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "");
+  if (!/^[a-z0-9][a-z0-9-]*$/.test(id)) die("invalid name", "use letters, numbers, and hyphens");
+  const dir = join(CWD, id);
+  if (existsSync(dir)) die(`"${id}" already exists here.`);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, "extension.json"), JSON.stringify({ id, name, version: "0.1.0", publisher: "", description: "A Sophia Stack extension.", entry: "./extension.js", permissions: ["site:read", "settings:read", "settings:write", "ai:use"], adminNav: [{ label: name, path: "/admin/extensions/" + id, icon: "box" }], hooks: ["page.afterSave"], requires: { sophiaStack: ">=1.0.0" } }, null, 2) + "\n");
+  writeFileSync(join(dir, "extension.js"), extTemplate(name, id));
+  writeFileSync(join(dir, "README.md"), `# ${name}\n\nA Sophia Stack extension.\n\n## Develop\n\n\`\`\`bash\nSOPHIA_EXTENSIONS_DIR="$(pwd)/.." sophia dev   # load it into a dev server\n\`\`\`\n\n## Publish (so anyone can one-click install)\n\nPush this folder to a **public** git repo, then users add it from the dashboard's\n**Extensions** tab (owner/repo, or owner/repo + subdir). See docs/extensions/.\n`);
+  ok(`created extension ./${id}`);
+  console.log("  Develop:  " + c.cyan(`SOPHIA_EXTENSIONS_DIR="$(pwd)" sophia dev`) + c.gray("   (or copy into a deployment's .sophia-data/extensions/)"));
+  console.log("  Publish:  push to a " + c.cyan("public git repo") + " → users install it in one click from the Extensions tab.");
+  console.log("  Docs:     " + c.gray("docs/extensions/  ·  examples/extensions/hello-extension"));
 }
 
 function backup() {
@@ -248,6 +291,7 @@ switch (cmd) {
   case "dev": needDeps(); runScript("dev.mjs"); break;
   case "init": init(argv[1]); break;
   case "template": template(argv[1], argv[2]); break;
+  case "create-extension": case "extension": createExtension(argv[1]); break;
   case "backup": backup(); break;
   case "restore": restore(argv[1]); break;
   case "deploy": deploy(); break;
