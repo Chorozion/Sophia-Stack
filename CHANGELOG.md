@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-06-27
+
+The **AI image generation** release: provider-agnostic image generation as an extension, folded into
+the build flow — the builder now creates and places fitting images while it works. Verified live with
+fal.ai Seedream 4.5. 247 tests across 24 suites.
+
 ### Added
 - **The builder generates images automatically** — when **Image Studio** is installed, the AI builder
   gets a `generate_image` tool and is prompted to **proactively** create + place a fitting image while
@@ -136,6 +142,7 @@ First public, open-source release. Relicensed to **Apache-2.0**.
 - `SameSite=Lax` session cookies; CORS that does not bypass auth.
 - No secrets, keys, or machine paths committed; live URL + internal endpoint scrubbed from history.
 
-[Unreleased]: https://github.com/Chorozion/Sophia-Stack/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/Chorozion/Sophia-Stack/compare/v1.5.1...HEAD
+[1.5.1]: https://github.com/Chorozion/Sophia-Stack/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/Chorozion/Sophia-Stack/compare/v1.0.0...v1.5.0
 [1.0.0]: https://github.com/Chorozion/Sophia-Stack/releases/tag/v1.0.0
