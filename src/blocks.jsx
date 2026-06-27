@@ -17,9 +17,11 @@ export function Nav({ brand, links = [] }) {
   );
 }
 
-export function Hero({ headline, sub, cta, kicker }) {
+export function Hero({ headline, sub, cta, kicker, bg, image }) {
+  const src = bg || image;
+  const style = src ? { backgroundImage: "linear-gradient(rgba(8,16,26,.5),rgba(8,16,26,.55)), url(" + src + ")", backgroundSize: "cover", backgroundPosition: "center" } : undefined;
   return (
-    <section className="sx-hero">
+    <section className={"sx-hero" + (src ? " sx-hero-bg" : "")} style={style}>
       {kicker && <span className="sx-kicker">{kicker}</span>}
       <h1 className="sx-h1">{headline}</h1>
       {sub && <p className="sx-sub">{sub}</p>}

@@ -19,6 +19,9 @@ body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-heig
 .sx-brand{font-family:var(--font-display);font-weight:700;font-size:20px;text-transform:var(--head-transform,none)}
 .sx-links{display:flex;gap:26px}.sx-link{color:var(--muted);font-size:14px;font-weight:500;transition:color .2s}.sx-link:hover{color:var(--accent)}
 .sx-hero{position:relative;padding:114px 32px 84px;max-width:var(--maxw);margin:0 auto;text-align:var(--hero-align,center);overflow:hidden}
+.sx-hero-bg{border-radius:18px;min-height:440px;display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;margin-top:10px;box-shadow:0 18px 54px rgba(0,0,0,.2)}
+.sx-hero-bg .sx-h1,.sx-hero-bg .sx-sub{color:#fff;-webkit-text-fill-color:#fff;background:none;text-shadow:0 2px 18px rgba(0,0,0,.35)}
+.sx-hero-bg::before{display:none}
 .sx-kicker{display:inline-block;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);border:1px solid var(--border);border-radius:999px;padding:6px 14px;margin-bottom:22px}
 .sx-h1{font-family:var(--font-display);font-weight:700;font-size:clamp(42px,6.4vw,74px);line-height:1.03;letter-spacing:-.03em;margin:0 0 18px;color:var(--fg);text-transform:var(--head-transform,none)}
 .sx-sub{font-size:clamp(17px,2vw,21px);color:var(--muted);max-width:60ch;margin:0 var(--sub-mx,0) 32px}

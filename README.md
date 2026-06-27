@@ -60,9 +60,10 @@ real-time preview (VEX) on the right that updates as the AI edits — no reload,
 |---|---|
 | [![Coffee site](docs/screenshots/01-landing.png)](docs/screenshots/01-landing.png) | [![SaaS site](docs/screenshots/06-built-page.png)](docs/screenshots/06-built-page.png) |
 
-**AI image generation** (Image Studio extension — **Seedream 4.5** · Nano Banana 2 · OpenAI · Imagen):
-the builder generates an image that fits your site and places it on the page. Below is a **real
-Seedream 4.5 render** on a live site:
+**AI image generation, built into the flow** (Image Studio extension — **Seedream 4.5** · Nano Banana 2
+· OpenAI · Imagen): when it's installed, the builder **automatically** generates an image that fits
+your site and drops it in (e.g. as the hero background) — no extra step. Below is a **real Seedream
+4.5 render**, auto-placed by the builder on a live coffee-shop site:
 
 <p align="center"><a href="docs/screenshots/10-seedream-live.png"><img src="docs/screenshots/10-seedream-live.png" width="560" alt="A live site with a real AI-generated Seedream 4.5 image"></a></p>
 

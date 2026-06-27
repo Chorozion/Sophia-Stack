@@ -22,7 +22,7 @@ const llm = http.createServer((req, res) => {
     // expose whether generate_image was offered (assert below via a header echo)
     res.setHeader("x-had-image-tool", toolNames.includes("generate_image") ? "1" : "0");
     if (tools.length === 0) return reply({ role: "assistant", content: null, tool_calls: [{ id: "c1", type: "function", function: { name: "generate_image", arguments: JSON.stringify({ prompt: "a warm coffee shop hero, golden hour" }) } }] });
-    if (tools.length === 1) { let url = ""; try { url = JSON.parse(tools[0].content).url; } catch {} return reply({ role: "assistant", content: null, tool_calls: [{ id: "c2", type: "function", function: { name: "apply_patch", arguments: JSON.stringify({ ops: [{ op: "set", id: "hero", path: "image", value: url }] }) } }] }); }
+    if (tools.length === 1) { let url = ""; try { url = JSON.parse(tools[0].content).url; } catch {} return reply({ role: "assistant", content: null, tool_calls: [{ id: "c2", type: "function", function: { name: "apply_patch", arguments: JSON.stringify({ ops: [{ op: "set", id: "hero", path: "bg", value: url }] }) } }] }); }
     return reply({ role: "assistant", content: "Added a generated hero image. ✓" });
   });
 });
@@ -44,8 +44,8 @@ ok((await S("GET", "/api/sophia/extensions")).body.extensions.some((e) => e.id =
 const run = await S("POST", "/api/sophia/agent", { messages: [{ role: "user", content: "build a coffee shop site with a hero image" }], preview: false });
 ok(run.body.ok, "the builder ran");
 const hero = (await S("GET", "/api/sophia/model")).body.pages["/"].blocks.find((b) => b.id === "hero");
-ok(hero && /^\/media\//.test(hero.image || ""), "the builder generated an image via the extension and placed it on the hero block");
-const served = hero && hero.image ? await fetch(base + hero.image) : { ok: false, headers: { get: () => "" } };
+ok(hero && /^\/media\//.test(hero.bg || ""), "the builder generated an image via the extension and set it as the hero background");
+const served = hero && hero.bg ? await fetch(base + hero.bg) : { ok: false, headers: { get: () => "" } };
 ok(served.ok && /image\//.test(served.headers.get("content-type") || ""), "the generated image is served from the media library");
 
 console.log(`\n  ${pass} passed, ${fail} failed`);
