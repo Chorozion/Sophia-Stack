@@ -1,7 +1,7 @@
 {
   "name": "@sophiaxt/sophia-stack",
   "version": "1.0.0",
-  "description": "Open-source, self-hosted AI app builder. Deploy to your own hosting, own your files and data, and let AI agents build and operate it via REST, MCP, and OpenAPI — Lovable/Base44-style building without SaaS lock-in.",
+  "description": "Open-source, self-hosted, provider-agnostic AI app builder from SophiaXT Tech. Own your site and operate it with any AI (OpenAI, Anthropic, Gemini, or local) via REST, MCP, and OpenAPI. Extensible, agent-operable, no SaaS lock-in.",
   "type": "module",
   "bin": {
     "sophia": "./bin/sophia.mjs"
